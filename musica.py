@@ -17,7 +17,7 @@ class musica(commands.Cog):
       await voice_channel.connect()
     else:
       await ctx.voice_client.move_to(voice_channel)
-      await ctx.send('Entrei! :D')
+      await ctx.send('Entrei! Oláaaaaa :D')
 
 #Comando para disconectar:  
   @commands.command()
@@ -28,7 +28,7 @@ class musica(commands.Cog):
   
 #Comando para tocar música:
   @commands.command()
-  async def play(self, ctx):
+  async def p(self, ctx):
     ctx.voice_client.stop()
     FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 - reconnect_delay_max 2', 'options': '-vn'}
     YDL_OPTIONS = {'format': "bestaudio"}
@@ -39,4 +39,25 @@ class musica(commands.Cog):
       url2 = info['formats'][0]['url']
       source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
       vc.play(souce)
-      await ctx.send('Tocando', source, '🎶')
+      await ctx.send('Tocando: ', cogs, '🎶')
+
+#Comando para pausar a música:
+  @commands.command()
+  async def pause(self, ctx):
+    await ctx.voice_client.pause()
+    await ctx.send('Pausado! ⏸️')
+
+#Comando para voltar a tocar:
+  @commands.command()
+  async def play(self, ctx):
+    await ctx.voice_client.resume()
+    await ctx.send('Tocando de novo! 🎶')
+
+#Comando Mostrar os comandos:
+  @commands.command()
+  async def help(self, ctx):
+    await ctx.send('Oi, ' + "<@{}>".format(userid) + ' tudo bem?\nEstes são os meus comandos até o momento:\n1. Antes de tudo, envie **/entre** para me chamar ao canal e eu chegarei rapidinho\n2. Use **/p** seguido do link da música no youtube para toca-la\n3. Use **/pause** para pausar a sua música\n4. Use **/play** para retomar uma música que esta pausada\n5. E por fim, use **/saia** para que eu vá embora!\nPor enquanto é isto, estou sempre a disposição, lembre-se de enviar **/help** caso esqueça de algum comando, e até a próxima! 😘')
+
+
+  def setup(client):
+    client.add_cog(music(client))
