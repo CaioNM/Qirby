@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands
-import music
+import musica
 
-cogs = [music]
+cogs = [musica]
 
-client = commands.Bot(commands_prefix=/, intents=discord.Intents.all())
+client = commands.Bot(command_prefix='/', intents = discord.Intents.all())
 
 for i in range(len(cogs)):
-	cogs[i].setup(client)
+    cogs[i].setup(client)
 
-client.run('#Aqui é o token do discord q pega no site dps')
+client.run("ODg3ODQzNjM4OTg4NjQwMzA2.YUKC0g.wumQs4Hr8qjwYc8dSN9bnbWtelE")
