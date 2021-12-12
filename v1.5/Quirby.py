@@ -1,20 +1,47 @@
+from functools import update_wrapper
 import discord
 import random
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.ext.commands.core import command
+from itertools import cycle
+#Imports que talvez sejam usados no futuro, não sei
+from typing import ValuesView
+import asyncio
+from discord.user import User
+import json
+
 
 #Prefixo dos comando
 # OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
 # Link: https://youtu.be/glo9R7JGkRE
-client = commands.Bot(command_prefix='/')
+client = commands.Bot(command_prefix='/', description='🚧 Trabalhando em atualizações 🚧')
 
 #Remove o comando help pre-definido pela biblioteca para poder usar personalizados
 client.remove_command("help")
+
+#Lista de Status diferentes do Kirby
+status = cycle([
+    "Kirby's Return to Dream Land",
+    'Oi :D',
+    'So no meme :P',
+    'Ouvindo Música',
+    'Dizendo como a Bebel é linda',
+    'Assistindo todos os filmes do Homem-Aranha, de novo',
+    '/help | /ajuda... ou chama o Moura ai',
+    'Observando você 👁',
+    'https://youtu.be/dQw4w9WgXcQ'
+])
+
+#Loop de status, recebe a lista acima e muda a cada 120 segundos
+@tasks.loop(seconds=120)
+async def status_swap():
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name=next(status)))
 
 #Teste de funcionamento do bot
 @client.event
 async def on_ready():
     print('Funcionando!')
+    status_swap.start()
 
 #Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
 # em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
@@ -133,13 +160,23 @@ async def mute(ctx, member:discord.Member, *, reason='Não justificado'):
     #Manda mensagem privada pro usuário, isso é bom :D
     await member.send(f'Você foi mutado do **{guild.name}** | Justificativa: **{reason}**')
 '''
-
-
+#Comando de ajuda, depois atualizar e mandar mensagem privada com os comandos pra quem pediu
 @client.command(aliases=['ajuda'])
 @commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
 async def help(ctx):
     await ctx.send('ajuda go brrrrr uiiiuuu uiiuuu 🚑\n\n\n\n Meme, tem q arrumar dps :)')
 
+@client.event
+async def on_member_join(member):
+    with open('users.json', 'r') as f:
+        users = json.load(f)
+    
+    await update_data(users, member)
+
+    with open('users.json', 'w') as f:
+        json.dump(users, f, indent=4)
+
+    
 
 #Mensagens de possíveis erros de usuarios nos comandos:
 @bolaoito.error
@@ -154,7 +191,7 @@ async def clear_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("Por favor, digite o **número** de mensagens que quer apagar.")
 
-#Mensagem de erro, mostra os segundos restantes para poder mandar mensagem
+#Mensagem de erro em caso spamming, mostra os segundos restantes para poder mandar mensagem
 @ping.error
 @clear.error
 @bolaoito.error
