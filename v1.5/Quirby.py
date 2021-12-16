@@ -4,20 +4,29 @@ import random
 from discord.ext import commands, tasks
 from discord.ext.commands.core import command
 from itertools import cycle
+from io import BytesIO
 #Imports que talvez sejam usados no futuro, não sei
 from typing import ValuesView
 import asyncio
 from discord.user import User
 import json
+import DiscordUtils
+from discord_slash import SlashCommand
+# Testes:
+import youtube_dl
 
 
 #Prefixo dos comando
 # OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
 # Link: https://youtu.be/glo9R7JGkRE
-client = commands.Bot(command_prefix='/', description='🚧 Trabalhando em atualizações 🚧')
+client = commands.Bot(command_prefix='/')
+
+music = DiscordUtils.Music()
 
 #Remove o comando help pre-definido pela biblioteca para poder usar personalizados
 client.remove_command("help")
+
+slash = SlashCommand(client, sync_commands=True)
 
 #Lista de Status diferentes do Kirby
 status = cycle([
@@ -43,15 +52,54 @@ async def on_ready():
     print('Funcionando!')
     status_swap.start()
 
+@client.command(aliases=['join', 'summon', 'entra', 'oi'])
+async def entre(ctx):
+    voicetrue = ctx.author.voice
+    if voicetrue is None:
+        return await ctx.send('Mas eu nao quero ficar sozinho :(')
+    await ctx.author.voice.channel.connect()
+    await ctx.send('Entrei :D')
+
+@client.command(aliases=['disconnect', 'd', 'leave', 'sair', 'tchau'])
+async def saia(ctx):
+    voicetrue = ctx.author.voice
+    mevoicetrue = ctx.guild.me.voice
+    if voicetrue is None:
+        return await ctx.send('Você não está na call')
+    if mevoicetrue is None:
+        return await ctx.send('Mas eu nao to em um canal... ue')
+    await ctx.voice_client.disconnect()
+    await ctx.send('Sai D:')
+
+#play
+
+@client.command(aliases=['p'])
+async def play(ctx, *, url):
+    player = music.get_player(guild_id=ctx.guild.id)
+    if not player:
+        player = music.create_player(ctx, ffmpeg_error_betterfix=True)
+    if not ctx.voice_client.is_playing():
+        await player.queue(url, search=True)
+        song = await player.play()
+        await ctx.send(f"Tocando `{song.name}`!")
+    else:
+        song = await player.queue(url, search=True)
+        await ctx.reply(f"`{song.name}` foi adicionado a fila")
+
+
 #Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
 # em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
-@client.command(aliases=['p'])
+@client.command()
 #Condiçao pra nao spamar comando, recebe a quantidade de vezes que o usuário pode mandar o comando e depois que esse limite é alcançado
 #entra num cooldown de X segundos, no caso "@commands.cooldown(<quantidade>, <seg de espera>, commands.cooldowns.BucketType.user)"
 @commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
 #O argumento "ctx" é usado quando o bot manda mensagens de texto
-async def ping(ctx):
+async def teste(ctx):
     await ctx.send('Pong!  🏓')
+
+@slash.slash(description="Mostra a latência do bot")
+async def ping(ctx):
+    await ctx.send(f'Ping de {round(client.latency * 1000)} ms!')
 
 #Comando bola oito funciona como aquela "bola mágica" que responde uma pergunta que o usuário faça
 @client.command(aliases=['8ball','8b'])
@@ -180,16 +228,16 @@ async def on_member_join(member):
 async def on_message(message):
     if message.author.bot == False:
         with open('users.json', 'r') as f:
-          users = json.load(f)
+            user = json.load(f)
     
-        await update_data(users, message.author)
-        await add_xp(users, message.author, 5)
-        await level_up(users, message.author, message)
+        await update_data(user, message.author)
+        await add_xp(user, message.author, 5)
+        await level_up(user, message.author, message)
 
         with open('users.json', 'w') as f:
-          json.dump(users, f, indent=4)
+            json.dump(user, f, indent=4)
 
-    await client.process_commands(message)
+        await client.process_commands(message)
 
 
 async def update_data(users, user):
@@ -211,21 +259,20 @@ async def level_up(users, user, message):
         await message.channel.send(f'🎉 {user.mention} subiu de nível!!! Nível - {lvl_end} 🎉')
         users[f'{user.id}']['level'] = lvl_end
 
-@client.command()
+@client.command(aliases=['nivel','lvl'])
 async def level(ctx, member: discord.Member = None):
     if not member:
         id = ctx.message.author.id
         with open('users.json', 'r') as f:
             users = json.load(f)
         lvl = users[str(id)]['level']
-        await ctx.send(f' Você está no nível {lvl}**!')
+        await ctx.send(f' Você está no nível {lvl}!')
     else:
         id = member.id
         with open('users.json', 'r') as f:
             users = json.load(f)
         lvl = users[str(id)]['level']
         await ctx.send(f'{member} está no nível {lvl}!')
-    
 
 #Mensagens de possíveis erros de usuarios nos comandos:
 @bolaoito.error
