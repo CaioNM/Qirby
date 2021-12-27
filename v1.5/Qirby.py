@@ -94,7 +94,22 @@ async def play(ctx, *, url):
         song = await player.queue(url, search=True)
         await ctx.reply(f"`{song.name}` foi adicionado a fila")
 
+@client.command(aliases=['playlist'])
+async def queue(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    await ctx.send(f"{'   */ -> /*   '.join([song.name for song in player.current_queue()])}")
 
+@client.command()
+async def pause(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    song = await player.pause()
+    await ctx.send(f'`{song.name}` foi pausado(a)! :pause_button:')
+
+@client.command(aliases=['toque'])
+async def resume(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    song = await player.resume()
+    await ctx.send(f'`{song.name}` voltou a tocar! :play_pause:')
 
 #Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
 # em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
@@ -171,9 +186,11 @@ async def unban(ctx, *, member):
 async def clear(ctx, quantidade=11):
     #Essa linha de código é importante, so permite que o usuário com uma permissão específica apague as mensagens, talvez possa ser usado com cargos?
     #Para banir seria "ctx.author.guild_permissions.ban_members", por exemplo. Kick = kick_members
+    '''
     if(not ctx.author.guild_permissions.manage_messages):
         await ctx.send('Você não tem a permissão necessária para isso...')
         return
+    '''
     quantidade = quantidade+1
     if quantidade > 101:
         await ctx.send('Não posso deletar mais de 100 mensagens, desculpe :(')
