@@ -134,6 +134,23 @@ async def remove(ctx, index):
     song = await player.remove_from_queue(int(index))
     await ctx.send(f'Removi `{song.name}` da playlist!')
 
+@client.command()
+async def skip(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    data = await player.skip(force=True)
+    song = player.now_playing()
+    if len(data) == 2:
+        await ctx.send(f"{data[0].name} ⏩ {data[1].name}")
+    else:
+        await ctx.send(f"Pulei `{song.name}`! ⏩")
+
+@client.command()
+async def stop(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    player.queue = []
+    await player.stop()
+    await ctx.send("Parei a música e limpei a playslist! 🟥 ")  
+
 
 #Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
 # em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
