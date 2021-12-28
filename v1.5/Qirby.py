@@ -111,6 +111,30 @@ async def resume(ctx):
     song = await player.resume()
     await ctx.send(f'`{song.name}` voltou a tocar! :play_pause:')
 
+@client.command()
+async def loop(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    song = await player.toggle_song_loop()
+    if song.is_looping:
+        return await ctx.send(f'{song.name} está em loop! :infinity:')
+    else:
+        return await ctx.send(f'{song.name} não está em loop! :octagonal_sign:')
+
+@client.command()
+async def tocando(ctx):
+    player = music.get_player(guild_id=ctx.guild.id)
+    song = player.now_playing()
+    if song is None:
+        await ctx.send('Não tem nada tocando...')
+    await ctx.send(song.name)
+
+@client.command()
+async def remove(ctx, index):
+    player = music.get_player(guild_id=ctx.guild.id)
+    song = await player.remove_from_queue(int(index))
+    await ctx.send(f'Removi `{song.name}` da playlist!')
+
+
 #Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
 # em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
 @client.command()
