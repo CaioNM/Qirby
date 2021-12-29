@@ -1,19 +1,23 @@
-from functools import update_wrapper
+#from functools import _Descriptor, update_wrapper
 import discord
+import nextcord
 import random
-from discord import voice_client
-from discord.channel import VoiceChannel
-from discord.ext import commands, tasks
-from discord.ext.commands.core import command
+from nextcord import voice_client
+from nextcord import member
+from nextcord.channel import VoiceChannel
+from nextcord.embeds import Embed
+from nextcord.ext import commands, tasks
+from nextcord.ext.commands.core import command
 from itertools import cycle
 from io import BytesIO
+import psutil
 #Imports que talvez sejam usados no futuro, não sei
 from typing import ValuesView
 import asyncio
-from discord.user import User
+from nextcord.user import User
 import json
 import DiscordUtils
-from discord_slash import SlashCommand
+#from discord_slash import SlashCommand
 # Testes:
 import youtube_dl
 import os
@@ -22,8 +26,6 @@ import os
 #Instalaçoes Manuais:
 #pip install DiscordUtils[voice]
 #pip install DiscordUtils
-#pip install discord-py-slash-command
-#pip install discordSuperUtils
 
 #Prefixo dos comando
 # OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
@@ -35,7 +37,19 @@ music = DiscordUtils.Music()
 #Remove o comando help pre-definido pela biblioteca para poder usar personalizados
 client.remove_command("help")
 
-slash = SlashCommand(client, sync_commands=True)
+#slash = SlashCommand(client, sync_commands=True)
+
+'''
+Coisas Legais pra atualizações futuras
+Observação: Se o Qirby ficar instalado em mts bots, usar o Shards vai melhorar o desempenho:
+client = commands.AutoShardedBot(shard_count=10, command_prefix='/')
+
+Comando de ligar ou desligar outros comandos se eu decidir:
+- https://www.youtube.com/watch?v=hPEDR30SZ8M&list=PLW4Cg4G29vz0enf3ZeqWPPd_-Z3YK8mH4&index=34
+
+Comando pra pegar emojis de outros servidores:
+- https://www.youtube.com/watch?v=sskPcO1WLnE&list=PLW4Cg4G29vz0enf3ZeqWPPd_-Z3YK8mH4&index=35
+'''
 
 #Lista de Status diferentes do Kirby
 status = cycle([
@@ -50,16 +64,71 @@ status = cycle([
     'https://youtu.be/dQw4w9WgXcQ'
 ])
 
-#Loop de status, recebe a lista acima e muda a cada 120 segundos
-@tasks.loop(seconds=120)
-async def status_swap():
-    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name=next(status)))
+'''
+To do:
+- Mensagens de afeto
+- Comandos de erro
+- Colocar nome e descrição nos comandos
+'''
 
 #Teste de funcionamento do bot
 @client.event
 async def on_ready():
     print('Funcionando!')
     status_swap.start()
+    uptimeCounter.start()
+
+#Loop de status, recebe a lista acima e muda a cada 120 segundos
+@tasks.loop(seconds=120)
+async def status_swap():
+    await client.change_presence(activity=nextcord.Activity(type=nextcord.ActivityType.playing, name=next(status)))
+
+#Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
+# em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
+@client.command()
+#Condiçao pra nao spamar comando, recebe a quantidade de vezes que o usuário pode mandar o comando e depois que esse limite é alcançado
+#entra num cooldown de X segundos, no caso "@commands.cooldown(<quantidade>, <seg de espera>, commands.cooldowns.BucketType.user)"
+@commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
+#O argumento "ctx" é usado quando o bot manda mensagens de texto
+async def ping(ctx):
+    await ctx.send(f'Pong!  🏓\nPing de {round(client.latency * 1000)} ms!')
+
+#Dados do Bot:
+ts = 0
+tm = 0
+th = 0
+td = 0
+
+@tasks.loop(seconds=2.0)
+async def uptimeCounter():
+    global ts, tm, th, td
+    ts += 2
+    if ts == 60:
+        ts = 0
+        tm += 1
+        if tm == 60:
+            tm = 0
+            th += 1
+            if th == 24:
+                th = 0
+                td += 1
+
+#Essa parte garante que o contador nao vai começar antes do bot estar online
+@uptimeCounter.before_loop
+async def beforeUptimeCounter():
+    await client.wait_until_ready()
+
+@client.command()
+async def stats(ctx):
+    global ts, tm, th, td
+    embed = nextcord.Embed(title="Meus status! :D")
+    embed.add_field(name="Dias:", value=td, inline=True)
+    embed.add_field(name="Horas:", value=th, inline=True)
+    embed.add_field(name="Minutos:", value=tm, inline=True)
+    embed.add_field(name="Segundos:", value=ts, inline=True)
+    embed.add_field(name="CPU:", value=f"{psutil.cpu_percent()}%", inline=True)
+    embed.add_field(name="RAM:", value=f"{psutil.virtual_memory()[2]}%", inline=True)
+    await ctx.send(embed=embed)
 
 @client.command(aliases=['join', 'summon', 'entra', 'oi'])
 async def entre(ctx):
@@ -97,7 +166,7 @@ async def play(ctx, *, url):
 @client.command(aliases=['playlist'])
 async def queue(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
-    await ctx.send(f"{'   */ -> /*   '.join([song.name for song in player.current_queue()])}")
+    await ctx.send(f"{'   ➡️   '.join([song.name for song in player.current_queue()])}")
 
 @client.command()
 async def pause(ctx):
@@ -140,8 +209,6 @@ async def skip(ctx):
     data = await player.skip(force=True)
     song = player.now_playing()
     if len(data) == 2:
-        await ctx.send(f"{data[0].name} ⏩ {data[1].name}")
-    else:
         await ctx.send(f"Pulei `{song.name}`! ⏩")
 
 @client.command()
@@ -149,22 +216,13 @@ async def stop(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     player.queue = []
     await player.stop()
-    await ctx.send("Parei a música e limpei a playslist! 🟥 ")  
+    await ctx.send("Parei a música e limpei a playlist! 🟥 ")  
 
-
-#Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
-# em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
-@client.command()
-#Condiçao pra nao spamar comando, recebe a quantidade de vezes que o usuário pode mandar o comando e depois que esse limite é alcançado
-#entra num cooldown de X segundos, no caso "@commands.cooldown(<quantidade>, <seg de espera>, commands.cooldowns.BucketType.user)"
-@commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
-#O argumento "ctx" é usado quando o bot manda mensagens de texto
-async def ping(ctx):
-    await ctx.send(f'Pong!  🏓\nPing de {round(client.latency * 1000)} ms!')
-
+'''
 @slash.slash(description="Mostra a latência do bot")
 async def latencia(ctx):
     await ctx.send(f'Ping de {round(client.latency * 1000)} ms!')
+'''
 
 #Comando bola oito funciona como aquela "bola mágica" que responde uma pergunta que o usuário faça
 @client.command(aliases=['8ball','8b'])
@@ -227,11 +285,6 @@ async def unban(ctx, *, member):
 async def clear(ctx, quantidade=11):
     #Essa linha de código é importante, so permite que o usuário com uma permissão específica apague as mensagens, talvez possa ser usado com cargos?
     #Para banir seria "ctx.author.guild_permissions.ban_members", por exemplo. Kick = kick_members
-    '''
-    if(not ctx.author.guild_permissions.manage_messages):
-        await ctx.send('Você não tem a permissão necessária para isso...')
-        return
-    '''
     quantidade = quantidade+1
     if quantidade > 101:
         await ctx.send('Não posso deletar mais de 100 mensagens, desculpe :(')
@@ -265,11 +318,20 @@ async def mute(ctx, member:discord.Member, *, reason='Não justificado'):
     #Manda mensagem privada pro usuário, isso é bom :D
     await member.send(f'Você foi mutado do **{guild.name}** | Justificativa: **{reason}**')
 '''
+    
 #Comando de ajuda, depois atualizar e mandar mensagem privada com os comandos pra quem pediu
 @client.command(aliases=['ajuda'])
 @commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
 async def help(ctx):
-    await ctx.send('ajuda go brrrrr uiiiuuu uiiuuu 🚑\n\n\n\n Meme, tem q arrumar dps :)')
+    embed = nextcord.Embed(title="Ajuda do Qirby! 🚑", description='uiuuuu uiuuuu')
+    for command in client.walk_commands():
+        description = command.description
+        if not description or description is None or description == "":
+            description = "Sem descrição ainda"
+        embed.add_field(name=f"`/{command.name}{command.signature if command.signature is not None else ''}`", value=description)
+    await ctx.author.send(embed=embed)
+    await ctx.message.add_reaction("✅")
+    
 
 @client.event
 async def on_member_join(member):
@@ -317,7 +379,7 @@ async def level_up(users, user, message):
         users[f'{user.id}']['level'] = lvl_end
 
 @client.command(aliases=['nivel','lvl'])
-async def level(ctx, member: discord.Member = None):
+async def level(ctx, member: nextcord.Member = None):
     if not member:
         id = ctx.message.author.id
         with open('users.json', 'r') as f:
