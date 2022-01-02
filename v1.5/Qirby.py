@@ -11,6 +11,9 @@ from nextcord.ext.commands.core import command
 from itertools import cycle
 from io import BytesIO
 import psutil
+import time
+import aiohttp
+import urllib
 #Imports que talvez sejam usados no futuro, não sei
 from typing import ValuesView
 import asyncio
@@ -46,9 +49,6 @@ client = commands.AutoShardedBot(shard_count=10, command_prefix='/')
 
 Comando de ligar ou desligar outros comandos se eu decidir:
 - https://www.youtube.com/watch?v=hPEDR30SZ8M&list=PLW4Cg4G29vz0enf3ZeqWPPd_-Z3YK8mH4&index=34
-
-Comando pra pegar emojis de outros servidores:
-- https://www.youtube.com/watch?v=sskPcO1WLnE&list=PLW4Cg4G29vz0enf3ZeqWPPd_-Z3YK8mH4&index=35
 '''
 
 #Lista de Status diferentes do Kirby
@@ -68,7 +68,10 @@ status = cycle([
 To do:
 - Mensagens de afeto
 - Comandos de erro
-- Colocar nome e descrição nos comandos
+- Colocar descrição nos comandos
+- Mensagem cantinho do pensamento
+- Mensagem se mandar tomar no cu
+- Colocar reação nos comandos
 '''
 
 #Teste de funcionamento do bot
@@ -85,13 +88,14 @@ async def status_swap():
 
 #Colocar "aliases" no argumento do client de uma função, reduz o tamanho do comando, por exemplo, 
 # em vez de escrever /play, o user escreve /p e o comando funciona perfeitamente
-@client.command()
+@client.command(description='Mostra meu tempo de resposta')
 #Condiçao pra nao spamar comando, recebe a quantidade de vezes que o usuário pode mandar o comando e depois que esse limite é alcançado
 #entra num cooldown de X segundos, no caso "@commands.cooldown(<quantidade>, <seg de espera>, commands.cooldowns.BucketType.user)"
 @commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
 #O argumento "ctx" é usado quando o bot manda mensagens de texto
 async def ping(ctx):
     await ctx.send(f'Pong!  🏓\nPing de {round(client.latency * 1000)} ms!')
+    await ctx.message.add_reaction("🏓")
 
 #Dados do Bot:
 ts = 0
@@ -134,9 +138,12 @@ async def stats(ctx):
 async def entre(ctx):
     voicetrue = ctx.author.voice
     if voicetrue is None:
+        await ctx.message.add_reaction("😔")
         return await ctx.send('Mas eu nao quero ficar sozinho :(')
     await ctx.author.voice.channel.connect()
-    await ctx.send('Entrei :D')
+    await ctx.message.add_reaction("😊")
+    await ctx.send('Entrei, oláaaa :D')
+    
 
 @client.command(aliases=['disconnect', 'd', 'leave', 'sair', 'tchau'])
 async def saia(ctx):
@@ -147,11 +154,16 @@ async def saia(ctx):
     if mevoicetrue is None:
         return await ctx.send('Mas eu nao to em um canal... ue')
     await ctx.voice_client.disconnect()
-    await ctx.send('Sai D:')
+    await ctx.send('Sai, até a próxima!')
+    await ctx.message.add_reaction("👋") 
 
 #play
 @client.command(aliases=['p'])
 async def play(ctx, *, url):
+    mevoicetrue = ctx.guild.me.voice
+    if mevoicetrue is None:
+        await ctx.author.voice.channel.connect()
+        await ctx.message.add_reaction("😊")
     player = music.get_player(guild_id=ctx.guild.id)
     if not player:
         player = music.create_player(ctx, ffmpeg_error_betterfix=True)
@@ -159,9 +171,11 @@ async def play(ctx, *, url):
         await player.queue(url, search=True)
         song = await player.play()
         await ctx.send(f"Tocando `{song.name}`!")
+        await ctx.message.add_reaction("🎶")
     else:
         song = await player.queue(url, search=True)
         await ctx.reply(f"`{song.name}` foi adicionado a fila")
+        await ctx.message.add_reaction("🎶") 
 
 @client.command(aliases=['playlist'])
 async def queue(ctx):
@@ -173,21 +187,26 @@ async def pause(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     song = await player.pause()
     await ctx.send(f'`{song.name}` foi pausado(a)! :pause_button:')
+    await ctx.message.add_reaction("⏸️") 
 
 @client.command(aliases=['toque'])
 async def resume(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     song = await player.resume()
-    await ctx.send(f'`{song.name}` voltou a tocar! :play_pause:')
+    await ctx.send(f'`{song.name}` voltou a tocar!')
+    await ctx.message.add_reaction("⏯️") 
 
 @client.command()
 async def loop(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     song = await player.toggle_song_loop()
     if song.is_looping:
+        await ctx.message.add_reaction("♾️") 
         return await ctx.send(f'{song.name} está em loop! :infinity:')
+        
     else:
-        return await ctx.send(f'{song.name} não está em loop! :octagonal_sign:')
+        await ctx.message.add_reaction("🛑") 
+        return await ctx.send(f'{song.name} não está em loop! 🛑')
 
 @client.command()
 async def tocando(ctx):
@@ -209,14 +228,16 @@ async def skip(ctx):
     data = await player.skip(force=True)
     song = player.now_playing()
     if len(data) == 2:
-        await ctx.send(f"Pulei `{song.name}`! ⏩")
+        await ctx.send(f"Pulei `{song.name}`!")
+        await ctx.message.add_reaction("⏩")
 
 @client.command()
 async def stop(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     player.queue = []
     await player.stop()
-    await ctx.send("Parei a música e limpei a playlist! 🟥 ")  
+    await ctx.send("Parei a música e limpei a playlist!")
+    await ctx.message.add_reaction("🟥") 
 
 '''
 @slash.slash(description="Mostra a latência do bot")
@@ -290,7 +311,8 @@ async def clear(ctx, quantidade=11):
         await ctx.send('Não posso deletar mais de 100 mensagens, desculpe :(')
     else:
         await ctx.channel.purge(limit=quantidade)
-        await ctx.send('Limpo! 🧹')
+        await ctx.send('**Limpo!** 🧹')
+        await ctx.message.add_reaction("🧹")
 
 '''
 #Essa parte do código não é tao importante, teoriacamente ele mutaria um usuário do server criando um cargo, mas n funciona e eu nao acho tao necessária agora.
@@ -330,9 +352,8 @@ async def help(ctx):
             description = "Sem descrição ainda"
         embed.add_field(name=f"`/{command.name}{command.signature if command.signature is not None else ''}`", value=description)
     await ctx.author.send(embed=embed)
-    await ctx.message.add_reaction("✅")
+    await ctx.message.add_reaction("🚑")
     
-
 @client.event
 async def on_member_join(member):
     with open('users.json', 'r') as f:
@@ -392,6 +413,59 @@ async def level(ctx, member: nextcord.Member = None):
             users = json.load(f)
         lvl = users[str(id)]['level']
         await ctx.send(f'{member} está no nível {lvl}!')
+        await ctx.message.add_reaction("🥳")
+
+@client.command()
+async def emoji(ctx, url:str, *,name):
+    guild = ctx.guild
+    async with aiohttp.ClientSession() as ses:
+        async with ses.get(url) as r:
+            try:
+                imgOrGif = BytesIO(await r.read())
+                bValue = imgOrGif.getvalue()
+                if r.status in range(200, 299):
+                    emoji = await guild.create_custom_emoji(image=bValue, name=name)
+                    await ctx.send('Emoji adicionado! :D')
+                    await ses.close()
+                else:
+                    await ctx.send(f'Não funcionou D: | {r.status}')
+            except nextcord.HTTPException:
+                await ctx.send('o arquivo é  P E S A D Ã O')
+
+@client.command()
+async def meme(ctx):
+    memeApi = urllib.request.urlopen('https://meme-api.herokuapp.com/gimme')
+    memeData = json.load(memeApi)
+
+    memeUrl = memeData['url']
+    memeName = memeData['title']
+    memePoster = memeData['author']
+    memeSub = memeData['subreddit']
+    memeLink = memeData['postLink']
+
+    embed = nextcord.Embed(title=memeName)
+    embed.set_image(url=memeUrl)
+    embed.set_footer(text=f'Meme by: {memePoster} | Subreddit: {memeSub} | Post: {memeLink}')
+    await ctx.send(embed=embed)
+
+@client.command()
+async def horademimir(self, ctx):
+    await ctx.send('Boa noite princesa, te amo <3, tenha uma boa noite de sono :D')
+    await ctx.message.add_reaction("😴")
+    
+@client.command()
+async def bebel(ctx):
+    await ctx.send('😍 <@544290205226762244> 😍\nO amor da minha vida, a garota mais linda do planeta')
+    await ctx.message.add_reaction("🥰")
+
+@client.command()
+async def acabou(ctx):
+    await ctx.send('E é aqui, que a gente vai terminar por hoje, muito obrigada por todos que participaram :)')
+
+@client.command()
+async def primeiroencontro(ctx):
+    await ctx.send('Oi meu amor, vc descobriu o segredo... Parabens! :D\nMeu amor, eu deixei esse pequeno segredinho nas linhas de código do bot para te dizer o quanto eu te amo... Esse bot foi contruido principalmente pra vc... eu fiz ele em sua homenagem. Vc com certeza é a pessoa que eu mais amo nesse mundo... Amo seu jeito, seu cabelo, o jeito que vc sorri, como se veste, seus olhos... tudo, tudo em vc é perfeito. Vc com certeza é a melhor pessoa que ja apareceu na minha vida. A cada vez que eu recebo o seu bom dia no whatsapp, a cada dia que eu recebo a benção de poder ver seu sorriso e escutar sua voz, eu me apaixono mais e mais. Eu nao tenho palavras pra expressar o quao importante vc eh pra mim e como eu sou grato por ter vc... Vc eh incrivel bel, te amo muitao minha princesa... Espero poder passar o resto da minha vida com vc. Espero tmb que vc goste desse botzinho e que vc se divirta muito tocando suas musicas favoritas. Obrigado por tudo Bel, te amo :)')
+    await ctx.message.add_reaction("❤️")
 
 #Mensagens de possíveis erros de usuarios nos comandos:
 @bolaoito.error
@@ -406,6 +480,11 @@ async def clear_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("Por favor, digite o **número** de mensagens que quer apagar.")
 
+@level.error
+async def level_error(ctx, error):
+    if isinstance(error, commands.errors.MemberNotFound):
+        await ctx.send("Hmmm não faço ideia de quem seja essa")
+
 #Mensagem de erro em caso spamming, mostra os segundos restantes para poder mandar mensagem
 @ping.error
 @clear.error
@@ -414,6 +493,7 @@ async def error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
         mensagem = ":x:**Relaxa brother**:x:, sem spammar... Manda mais daqui {:.2f} seg :clock5:" .format(error.retry_after)
         await ctx.send(mensagem)
+
 '''
 @client.error
 async def command_error(ctx, error):
@@ -423,3 +503,4 @@ async def command_error(ctx, error):
 
 #Token:
 client.run('ODg3ODQzNjM4OTg4NjQwMzA2.YUKC0g.wumQs4Hr8qjwYc8dSN9bnbWtelE')
+
