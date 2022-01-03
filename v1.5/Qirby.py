@@ -1,4 +1,5 @@
 #from functools import _Descriptor, update_wrapper
+from asyncio.events import TimerHandle
 import discord
 import nextcord
 import random
@@ -64,16 +65,6 @@ status = cycle([
     'https://youtu.be/dQw4w9WgXcQ'
 ])
 
-'''
-To do:
-- Mensagens de afeto
-- Comandos de erro
-- Colocar descrição nos comandos
-- Mensagem cantinho do pensamento
-- Mensagem se mandar tomar no cu
-- Colocar reação nos comandos
-'''
-
 #Teste de funcionamento do bot
 @client.event
 async def on_ready():
@@ -96,6 +87,7 @@ async def status_swap():
 async def ping(ctx):
     await ctx.send(f'Pong!  🏓\nPing de {round(client.latency * 1000)} ms!')
     await ctx.message.add_reaction("🏓")
+
 
 #Dados do Bot:
 ts = 0
@@ -467,6 +459,15 @@ async def primeiroencontro(ctx):
     await ctx.send('Oi meu amor, vc descobriu o segredo... Parabens! :D\nMeu amor, eu deixei esse pequeno segredinho nas linhas de código do bot para te dizer o quanto eu te amo... Esse bot foi contruido principalmente pra vc... eu fiz ele em sua homenagem. Vc com certeza é a pessoa que eu mais amo nesse mundo... Amo seu jeito, seu cabelo, o jeito que vc sorri, como se veste, seus olhos... tudo, tudo em vc é perfeito. Vc com certeza é a melhor pessoa que ja apareceu na minha vida. A cada vez que eu recebo o seu bom dia no whatsapp, a cada dia que eu recebo a benção de poder ver seu sorriso e escutar sua voz, eu me apaixono mais e mais. Eu nao tenho palavras pra expressar o quao importante vc eh pra mim e como eu sou grato por ter vc... Vc eh incrivel bel, te amo muitao minha princesa... Espero poder passar o resto da minha vida com vc. Espero tmb que vc goste desse botzinho e que vc se divirta muito tocando suas musicas favoritas. Obrigado por tudo Bel, te amo :)')
     await ctx.message.add_reaction("❤️")
 
+@client.command(aliases=['roll'])
+async def role(ctx, quantidade=0, *, numero=0):
+    i=1
+    await ctx.message.add_reaction("🎲")
+    while i<=quantidade:
+        i+=1
+        await ctx.send(f'{quantidade}d{numero} - **[{random.randint(1, numero)}]**')
+        
+
 #Mensagens de possíveis erros de usuarios nos comandos:
 @bolaoito.error
 async def bolaoito_error(ctx, error):
@@ -474,10 +475,15 @@ async def bolaoito_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Se você não pergutar, não posso responder :eye:")
 
+@role.error
+async def role_error(ctx, error):
+    if isinstance(error, commands.errors.BadArgument):
+        await ctx.send("Não conheço esse número, mande `/role <quantidade> <dado>`, por favor...")
+
 @clear.error
 async def clear_error(ctx, error):
     #Se o usuario não passar um número de mensagens a ser apagadas:
-    if isinstance(error, commands.BadArgument):
+    if isinstance(error, commands.errors.BadArgument):
         await ctx.send("Por favor, digite o **número** de mensagens que quer apagar.")
 
 @level.error
@@ -497,10 +503,9 @@ async def error(ctx, error):
 '''
 @client.error
 async def command_error(ctx, error):
-        if isinstance(error, commands.CommandNotFound):
+        if isinstance(error, commands.errors.CommandNotFound):
             await ctx.send("Desculpa, não conheço esse comando... :pensive:")
 '''
 
 #Token:
 client.run('ODg3ODQzNjM4OTg4NjQwMzA2.YUKC0g.wumQs4Hr8qjwYc8dSN9bnbWtelE')
-
