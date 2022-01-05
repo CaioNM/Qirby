@@ -35,7 +35,7 @@ import os
 #Prefixo dos comando
 # OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
 # Link: https://youtu.be/glo9R7JGkRE
-client = commands.Bot(command_prefix='.')
+client = commands.Bot(command_prefix='/')
 
 music = DiscordUtils.Music()
 
@@ -207,6 +207,7 @@ async def tocando(ctx):
     if song is None:
         await ctx.send('Não tem nada tocando...')
     await ctx.send(song.name)
+    await ctx.message.add_reaction("🎧") 
 
 @client.command()
 async def remove(ctx, index):
@@ -263,6 +264,20 @@ async def bolaoito(ctx, *, question):
                 "Duvido muito."]
     #Pega a pergunta e com o random, escolhe uma das respostas da lista acima:
     await ctx.send(f'Pergunta: {question}\n:8ball:: {random.choice(responses)}')
+    await ctx.message.add_reaction("🎱")
+
+@client.command()
+async def pp(ctx):
+    pp = ["8D - Mini pipi ):",
+                "8=D",
+                "8====D",
+                "8=======D",
+                "8==========D",
+                "8=============D",
+                "8================D - **MEGA PIPI** 💪"]
+    #Pega a pergunta e com o random, escolhe uma das respostas da lista acima:
+    await ctx.send(f'Tamanho da 🍆 GIROMBA 🍆: {random.choice(pp)}')
+    await ctx.message.add_reaction("🍆")
 
 '''
 #Os comandos abaixo servem pra kickar e banir do servidor, não da chamada... Achei interessante então fiz, mas é poderoso demais,
@@ -371,7 +386,6 @@ async def on_message(message):
 
         await client.process_commands(message)
 
-
 async def update_data(users, user):
     if not f'{user.id}' in users:
         users[f'{user.id}'] = {}
@@ -407,34 +421,7 @@ async def level(ctx, member: nextcord.Member = None):
             users = json.load(f)
         lvl = users[str(id)]['level']
         await ctx.send(f'{member} está no nível {lvl}!')
-
-@client.command(aliases=['lb'])
-async def leaderboard(ctx, x=3):
-    id = member.id
-    with open('users.json', 'r') as f:
-        users = json.load(f)
-    lvl = users[str(id)]['level']
-    exp=users[str(id)]['xp']
-    leaderboard = {}
-    total = []
-    for user in users:
-        name = int(user)
-        total_xp = exp
-        leaderboard[total_xp] = name
-        total.append(total_xp)
-    total = sorted(total, reverse=True)
-    em = nextcord.Embed(title=f"Top {x} do server :D", description="Mostra as pessoas com o mais alto nível registrado, quanto mais mensagens, mais nível")
-    index = 1
-    for amt in total:
-        id_ = leaderboard[amt]
-        mem = client.get_user(id_)
-        name = member.name
-        em.add_field(name = f"{index}. {name}", value=f'{amt}', incline = False)
-        if index == x:
-            break
-        else:
-            index += 1
-    await ctx.send(embed = em)
+        await ctx.message.add_reaction("⬆️")
 
 @client.command()
 async def emoji(ctx, url:str, *,name):
@@ -447,11 +434,14 @@ async def emoji(ctx, url:str, *,name):
                 if r.status in range(200, 299):
                     emoji = await guild.create_custom_emoji(image=bValue, name=name)
                     await ctx.send('Emoji adicionado! :D')
+                    await ctx.message.add_reaction("😋")
                     await ses.close()
                 else:
                     await ctx.send(f'Não funcionou D: | {r.status}')
+                    await ctx.message.add_reaction("❌")
             except nextcord.HTTPException:
                 await ctx.send('o arquivo é  P E S A D Ã O')
+                await ctx.message.add_reaction("❗")
 
 @client.command()
 async def meme(ctx):
@@ -468,6 +458,8 @@ async def meme(ctx):
     embed.set_image(url=memeUrl)
     embed.set_footer(text=f'Meme by: {memePoster} | Subreddit: {memeSub} | Post: {memeLink}')
     await ctx.send(embed=embed)
+    await ctx.message.add_reaction("🤣")
+    
 
 @client.command()
 async def horademimir(self, ctx):
@@ -482,7 +474,8 @@ async def bebel(ctx):
 @client.command()
 async def acabou(ctx):
     await ctx.send('E é aqui, que a gente vai terminar por hoje, muito obrigada por todos que participaram :)')
-
+    await ctx.message.add_reaction("🙏")
+    
 @client.command()
 async def primeiroencontro(ctx):
     await ctx.send('Oi meu amor, vc descobriu o segredo... Parabens! :D\nMeu amor, eu deixei esse pequeno segredinho nas linhas de código do bot para te dizer o quanto eu te amo... Esse bot foi contruido principalmente pra vc... eu fiz ele em sua homenagem. Vc com certeza é a pessoa que eu mais amo nesse mundo... Amo seu jeito, seu cabelo, o jeito que vc sorri, como se veste, seus olhos... tudo, tudo em vc é perfeito. Vc com certeza é a melhor pessoa que ja apareceu na minha vida. A cada vez que eu recebo o seu bom dia no whatsapp, a cada dia que eu recebo a benção de poder ver seu sorriso e escutar sua voz, eu me apaixono mais e mais. Eu nao tenho palavras pra expressar o quao importante vc eh pra mim e como eu sou grato por ter vc... Vc eh incrivel bel, te amo muitao minha princesa... Espero poder passar o resto da minha vida com vc. Espero tmb que vc goste desse botzinho e que vc se divirta muito tocando suas musicas favoritas. Obrigado por tudo Bel, te amo :)')
@@ -495,128 +488,7 @@ async def role(ctx, quantidade=0, *, numero=0):
     while i<=quantidade:
         i+=1
         await ctx.send(f'{quantidade}d{numero} - **[{random.randint(1, numero)}]**')
-'''
-vencedor = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-]
 
-player1 = ""
-player2 = ""
-vez = ""
-gameOver = True
-tabuleiro = [] 
-
-@client.command(aliases=['jdv', 'v', 'velha'])
-async def jogodavelha(ctx, p1:nextcord.Member, p2:nextcord.Member):
-        global player1, player2, vez, gameOver, count
-
-        if gameOver:
-            global tabuleiro
-            tabuleiro = [':white_large_square:', ':white_large_square:', ':white_large_square:'
-                         ':white_large_square:', ':white_large_square:', ':white_large_square:',
-                         ':white_large_square:', ':white_large_square:', ':white_large_square:']
-            vez = ""
-            gameOver = False
-            count = 0
-
-            player1 = p1
-            player2 = p2
-
-            # Mandando o tabuleiro:
-            line = ""
-            for x in range(len(tabuleiro)):
-                if x == 2 or x == 5 or x == 8:
-                    line += " " + tabuleiro[x]
-                    await ctx.send(line)
-                    line = ""
-                else:
-                    line += " " + tabuleiro[x]
-            
-            num = random.randint(1, 2)
-            if num == 1:
-                vez = player1
-                await ctx.send('É a vez do(a) <@' + str(player1.id) + '>!')
-            elif num==2:
-                vez = player2
-                await ctx.send('É a vez do(a) <@' + str(player2.id) + '>')      
-        else:
-            await ctx.send('Já tem alguem jogando! Espera esse jogo acabar')
-
-@client.command()
-async def jogar(ctx, pos:int):
-    global vez, player1, player2, tabuleiro, count, gameOver
-    
-    if not gameOver:
-        mark = ''
-        if vez == ctx.author:
-            if vez == player1:
-                mark = ':regional_indicator_x:'
-            elif vez == player2:
-                mark = ':o2:'
-            if 0 < pos < 10 and tabuleiro[pos-1] == ':white_large_square:':
-                tabuleiro[pos - 1] = mark
-                count += 1
-
-            line = ""
-            for x in range(len(tabuleiro)):
-                if x == 2 or x == 5 or x == 8:
-                    line += " " + tabuleiro[x]
-                    await ctx.send(line)
-                    line = ""
-                else:
-                    line += " " + tabuleiro[x]
-
-            checarVencedor(vencedor, mark)
-            if gameOver:
-                await ctx.send(mark + ' ganhou!')
-            elif count >= 9:
-                await ctx.send('**__________________/Empatou!\__________________**')
-            
-            if vez == player1:
-                vez == player2
-            elif vez == player2:
-                vez == player1
-
-            else:
-                await ctx.send('Escolha uma posição entre 1 e 9 que ainda não foi jogada :D')
-        else:
-            await ctx.send('Não é a sua vez!')
-    else:
-        await ctx.send('Comece um jogo usando o comando `/jogodavelha`!')
-
-def checarVencedor(vencedor, mark):
-    global gameOver
-    for condicao in vencedor:
-        if tabuleiro[condicao[0]] == mark and tabuleiro[condicao[1]] == mark and tabuleiro[condicao[2]] == mark:
-            gameOver = True 
-
-#Mensagens de possíveis erros de usuarios nos comandos:
-@jogodavelha.error
-async def jogodavelha_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("Por favor mencione os dois players que irão jogar")
-        await ctx.message.add_reaction("❌")
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("Por favor, mencione o segundo player!")
-        await ctx.message.add_reaction("❌")
-
-
-@jogar.error
-async def jogar_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("Por favor, mande a posição em que deseja jogar")
-        await ctx.message.add_reaction("❌")
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("Por favor, mande um número inteiro!")
-        await ctx.message.add_reaction("❌")
-'''
 player1 = ""
 player2 = ""
 vez = ""
@@ -637,6 +509,7 @@ vencedor = [
 @client.command(aliases=['jdv', 'v', 'velha'])
 async def jogodavelha(ctx, p1:nextcord.Member, p2:nextcord.Member):
     global player1, player2, vez, gameOver, count
+    await ctx.message.add_reaction("🎮")
 
     if gameOver:
         global tabuleiro
@@ -650,7 +523,7 @@ async def jogodavelha(ctx, p1:nextcord.Member, p2:nextcord.Member):
         player1 = p1
         player2 = p2
 
-        # print the board
+        # Manda o tabuleiro
         line = ""
         for x in range(len(tabuleiro)):
             if x == 2 or x == 5 or x == 8:
@@ -660,7 +533,7 @@ async def jogodavelha(ctx, p1:nextcord.Member, p2:nextcord.Member):
             else:
                 line += " " + tabuleiro[x]
 
-        # determine who goes first
+        # Determina quem vai primeiro
         num = random.randint(1, 2)
         if num == 1:
             vez = player1
@@ -686,7 +559,7 @@ async def jogar(ctx, pos: int):
                 tabuleiro[pos - 1] = mark
                 count += 1
 
-                # print the board
+                # Mandando o tabuleiro
                 line = ""
                 for x in range(len(tabuleiro)):
                     if x == 2 or x == 5 or x == 8:
@@ -697,14 +570,13 @@ async def jogar(ctx, pos: int):
                         line += " " + tabuleiro[x]
 
                 checarVencedor(vencedor, mark)
-                print(count)
                 if gameOver == True:
                     await ctx.send(mark + " **ganhou!**")
                 elif count >= 9:
                     gameOver = True
                     await ctx.send("**Empatou!**")
 
-                # switch turns
+                # Trocando turno
                 if vez == player1:
                     vez = player2
                 elif vez == player2:
@@ -716,14 +588,38 @@ async def jogar(ctx, pos: int):
     else:
         await ctx.send('Comece um jogo usando o comando `/jogodavelha`!')
 
-
 def checarVencedor(vencedor, mark):
     global gameOver
     for condicao in vencedor:
         if tabuleiro[condicao[0]] == mark and tabuleiro[condicao[1]] == mark and tabuleiro[condicao[2]] == mark:
             gameOver = True
 
+@client.command(aliases=['on', 'off', 'liga', 'desliga'])
+async def toggle(ctx, *, command):
+    if not ctx.author.id == 319850719228329985:
+        ctx.send('Você não tem autorização pra isso')
+        await ctx.message.add_reaction("❌")
+        return
+    command = client.get_command(command)
+    if command == None:
+        ctx.send('Não conheço esse comando...')
+        await ctx.message.add_reaction("🤔")
+    elif ctx.command == command:
+        await ctx.send('Você não pode desativar esse comando...!')
+        await ctx.message.add_reaction("❌")
+    else:
+        command.enabled = not command.enabled
+        situacao = 'habilitado' if command.enabled else 'desabilitado'
+        await ctx.send(f'Comando `{command.qualified_name}` foi **`{situacao}`**')
+        
 #Mensagens de possíveis erros de usuarios nos comandos:
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.DisabledCommand):
+        await ctx.send('Esse comando foi desativado pelo <@319850719228329985>. Chame ele pra ver isso, se precisar...')
+        await ctx.message.add_reaction("❌")
+        return
+
 @jogodavelha.error
 async def jogodavelha_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
