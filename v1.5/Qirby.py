@@ -45,12 +45,10 @@ client.remove_command("help")
 #slash = SlashCommand(client, sync_commands=True)
 
 '''
-Coisas Legais pra atualizações futuras
+Coisas Legais pra atualizações futuras:
 Observação: Se o Qirby ficar instalado em mts bots, usar o Shards vai melhorar o desempenho:
 client = commands.AutoShardedBot(shard_count=10, command_prefix='/')
 
-Comando de ligar ou desligar outros comandos se eu decidir:
-- https://www.youtube.com/watch?v=hPEDR30SZ8M&list=PLW4Cg4G29vz0enf3ZeqWPPd_-Z3YK8mH4&index=34
 '''
 
 #Lista de Status diferentes do Kirby
@@ -169,7 +167,7 @@ async def play(ctx, *, url):
         await ctx.reply(f"`{song.name}` foi adicionado a fila")
         await ctx.message.add_reaction("🎶") 
 
-@client.command(aliases=['playlist'])
+@client.command(aliases=['playlist', 'q'])
 async def queue(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     await ctx.send(f"{'   ➡️   '.join([song.name for song in player.current_queue()])}")
@@ -200,7 +198,7 @@ async def loop(ctx):
         await ctx.message.add_reaction("🛑") 
         return await ctx.send(f'{song.name} não está em loop! 🛑')
 
-@client.command()
+@client.command(aliases=['playing'])
 async def tocando(ctx):
     player = music.get_player(guild_id=ctx.guild.id)
     song = player.now_playing()
@@ -352,15 +350,10 @@ async def mute(ctx, member:discord.Member, *, reason='Não justificado'):
 @client.command(aliases=['ajuda'])
 @commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
 async def help(ctx):
-    embed = nextcord.Embed(title="Ajuda do Qirby! 🚑", description='uiuuuu uiuuuu')
-    for command in client.walk_commands():
-        description = command.description
-        if not description or description is None or description == "":
-            description = "Sem descrição ainda"
-        embed.add_field(name=f"`/{command.name}{command.signature if command.signature is not None else ''}`", value=description)
-    await ctx.author.send(embed=embed)
+    await ctx.author.send('**AJUDA DO QIRBY**\nuiuuuu uiuuuuu\n**Lista dos meus comandos:**\n\n- `/ping` -> Mostra meu ping, meu tempo de resposta...\n- `/stats` -> Mostra meus status, o tempo que estou ligado e os dados da máquina que me hospeda\n- `/entre [join, summon, entra, oi]` -> Me coloca na chamada :D\n- `/saia [disconnect, d, leave, sair, tchau]` -> Me manda embora da conversa :(\n- `/play [p] <link ou nome>` -> Toco a música que quiser\n- `/queue [playlist, q]` -> Mostra todas as músicas que armazenei, desde a que está tocando agora, até a última da fila\n- `/pause` -> Pausa a música\n- `/resume [toque]` -> Volta a tocar a música que estava pausada\n- `/loop` - Coloca a música atual em modo loop, ou seja, vai ficar repetindo até que alguem pule ou mande parar\n- `/tocando [playing]` -> Mostra o nome da música atual\n- `/remove <numero>` -> Tira uma das músicas da playlist que criei, mas deve ser colocado um numero a menos, por exemplo, se você quiser tirar a segunda música da playlist, o comando seria: `/remove 1`, já que a contagem começa com 0\n- `/skip` -> Pula pra próxima música\n- `/stop` -> Para de tocar e limpa completamente a playlist\n- `/bolaoito [8ball, 8b] <pergunta>` -> Responde mágicamente uma pergunta de sim ou não que fizer para ela\n- `/pp` -> 👀')
+    await ctx.author.send('\n- `/clear <número>` -> Apaga um certo número de mensagens do chat de texto, se não for especificado, 10 mensagens serão apagadas por padrão\n- `/help [ajuda]` -> **Sou eeeu! :D**, vou mandar uma mensagem pra você com todos os meus comandos!\n- `/level [nivel, lvl] <Membro>` -> Mostro o nível de alguem do server, a especificação so é necessária se quiser ver o nível de outra pessoa, para isso, precisa menciona-la. Mas se não mencionar, será exibido o seu nível\n- `/emoji <url> <nível>` -> Rouba, de outro server, ou adiciona um emoji no server, colocando primeiro o link de origem e logo depois, o nome que deseja\n- `/meme` -> Envia um meme no chat\n- `/bebel` -> 🥰\n- `/role [roll] <numero de dados> <numero do dado>` -> Rola quantos dados, de qualquer número, que você quiser, por exemplo, para rolar 4d5 seria `/role 4 5`\n- `/jogodavelha [jdv, v, velha] <Player 1> <Player 2>` -> Como o próprio nome ja diz, é o jogo da velha... Pra começar o jogo, basta chamar o comando e marcar ambos os jogadores logo depois. O jogo funciona com o comando abaixo\n- `/jogar [j] <posição>` -> Um complemento do jogo da velha, você usa esse comando pra dizer pra mim onde quer jogar...\n\nBom, é isso... Qualquer dúvida pode chamar o <@319850719228329985> caso tenha alguma dúvida. Até a próxima :D')
     await ctx.message.add_reaction("🚑")
-    
+
 @client.event
 async def on_member_join(member):
     with open('users.json', 'r') as f:
@@ -462,7 +455,7 @@ async def meme(ctx):
     
 
 @client.command()
-async def horademimir(self, ctx):
+async def horademimir(ctx):
     await ctx.send('Boa noite princesa, te amo <3, tenha uma boa noite de sono :D')
     await ctx.message.add_reaction("😴")
     
@@ -596,11 +589,11 @@ def checarVencedor(vencedor, mark):
 
 @client.command(aliases=['on', 'off', 'liga', 'desliga'])
 async def toggle(ctx, *, command):
-    if not ctx.author.id == 319850719228329985:
-        ctx.send('Você não tem autorização pra isso')
+    command = client.get_command(command)
+    if ctx.author.id != 319850719228329985:
+        ctx.send('Você não tem autorização pra isso.')
         await ctx.message.add_reaction("❌")
         return
-    command = client.get_command(command)
     if command == None:
         ctx.send('Não conheço esse comando...')
         await ctx.message.add_reaction("🤔")
