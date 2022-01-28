@@ -50,18 +50,30 @@ Observação: Se o Qirby ficar instalado em mts bots, usar o Shards vai melhorar
 client = commands.AutoShardedBot(shard_count=10, command_prefix='/')
 
 '''
-
-#Lista de Status diferentes do Kirby
-status = cycle([
-    "Kirby's Return to Dream Land",
+'''
     'Oi :D',
     'So no meme :P',
     'Ouvindo Música',
     'Dizendo como a Bebel é linda',
     'Assistindo todos os filmes do Homem-Aranha, de novo',
     '/help | /ajuda... ou chama o Moura ai',
-    'Observando você 👁',
     'https://youtu.be/dQw4w9WgXcQ'
+'''
+#Lista de Status diferentes do Kirby
+status = cycle([
+    "O que aconteceu com a sua irmã, Arthur?",
+    "Qual foi a última vez que você viu os olhos da Larissa, Levy?",
+    "Espero que sinta falta da Rafaela, Maethe",
+    "Alexandre... Cadê a Ester?",
+    "Eu sempre estive observando",
+    "O tempo de vocês tá acabando",
+    "Quem é a Corvo?",
+    "Onde tá o Elias?",
+    "Você sente falta da sua irmã, Rafael?",
+    "Você se lembra da Ana, Pandora? Ela ainda fala com você na sua cabeça?",
+    "Corram.",
+    "Cadê a Isis?",
+    '👁️',
 ])
 
 #Teste de funcionamento do bot
@@ -70,6 +82,7 @@ async def on_ready():
     print('Funcionando!')
     status_swap.start()
     uptimeCounter.start()
+    
 
 #Loop de status, recebe a lista acima e muda a cada 120 segundos
 @tasks.loop(seconds=120)
@@ -115,7 +128,7 @@ async def beforeUptimeCounter():
 @client.command()
 async def stats(ctx):
     global ts, tm, th, td
-    embed = nextcord.Embed(title="Meus status! :D")
+    embed = nextcord.Embed(title="Meus status! :D", color=nextcord.Color.magenta())
     embed.add_field(name="Dias:", value=td, inline=True)
     embed.add_field(name="Horas:", value=th, inline=True)
     embed.add_field(name="Minutos:", value=tm, inline=True)
@@ -150,11 +163,11 @@ async def saia(ctx):
 #play
 @client.command(aliases=['p'])
 async def play(ctx, *, url):
+    player = music.get_player(guild_id=ctx.guild.id)
     mevoicetrue = ctx.guild.me.voice
     if mevoicetrue is None:
         await ctx.author.voice.channel.connect()
         await ctx.message.add_reaction("😊")
-    player = music.get_player(guild_id=ctx.guild.id)
     if not player:
         player = music.create_player(ctx, ffmpeg_error_betterfix=True)
     if not ctx.voice_client.is_playing():
@@ -274,8 +287,39 @@ async def pp(ctx):
                 "8=============D",
                 "8================D - **MEGA PIPI** 💪"]
     #Pega a pergunta e com o random, escolhe uma das respostas da lista acima:
-    await ctx.send(f'Tamanho da 🍆 GIROMBA 🍆: {random.choice(pp)}')
+    await ctx.reply(f'Tamanho da 🍆 GIROMBA 🍆: {random.choice(pp)}')
     await ctx.message.add_reaction("🍆")
+
+@client.command()
+async def casada(ctx):
+    casada = ["0% - **RESPEITOSO**",
+                "10% comedor",
+                "20% comedor",
+                "30% comedor",
+                "40% comedor",
+                "50% - Só as vezes",
+                "60% comedor",
+                "70% comedor",
+                "80% comedor",
+                "90% comedor",
+                "100% - Comedor de casadas",
+                "10000% - Protejam as mamães o **COME CASADAS ESTÁ A SOLTA**"]
+    #Pega a pergunta e com o random, escolhe uma das respostas da lista acima:
+    await ctx.reply(f'Qual a chance de ser um comedor de casadas? {random.choice(casada)}')
+    await ctx.message.add_reaction("💪")
+
+@client.command(aliases=['lukk','pedro'])
+async def noia(ctx):
+    noia = ["0% - Nada noia :D",
+                "10% noia",
+                "25% noia",
+                "50% noia - Meio Noia",
+                "75% noia",
+                "100% - Completamente noia",
+                "1000% - **MEGA NOIA**"]
+    #Pega a pergunta e com o random, escolhe uma das respostas da lista acima:
+    await ctx.reply(f'Quão noia você é? {random.choice(noia)}')
+    await ctx.message.add_reaction("😎")
 
 '''
 #Os comandos abaixo servem pra kickar e banir do servidor, não da chamada... Achei interessante então fiz, mas é poderoso demais,
@@ -319,6 +363,10 @@ async def clear(ctx, quantidade=11):
         await ctx.send('**Limpo!** 🧹')
         await ctx.message.add_reaction("🧹")
 
+@client.command()
+async def tormenta(ctx):
+    await ctx.send('https://tormenta.analuiza84.repl.co/')
+    
 '''
 #Essa parte do código não é tao importante, teoriacamente ele mutaria um usuário do server criando um cargo, mas n funciona e eu nao acho tao necessária agora.
 # Acho que nem ta funcionando direito pra ser sincero e eu não quero arrumar. Tem algumas partes importantes tipo mandar mensagem privada, que eu vou acabar usando
@@ -447,12 +495,21 @@ async def meme(ctx):
     memeSub = memeData['subreddit']
     memeLink = memeData['postLink']
 
-    embed = nextcord.Embed(title=memeName)
+    embed = nextcord.Embed(title=memeName, color=nextcord.Color.magenta())
     embed.set_image(url=memeUrl)
     embed.set_footer(text=f'Meme by: {memePoster} | Subreddit: {memeSub} | Post: {memeLink}')
     await ctx.send(embed=embed)
     await ctx.message.add_reaction("🤣")
-    
+
+@client.command()
+async def gatinho(ctx):
+    c = 0
+    while True:
+        emoji = client.get_emoji('<931359027898761287>')
+        await ctx.send(f'{emoji}')
+        c+=1
+        if c==5:
+            break 
 
 @client.command()
 async def horademimir(ctx):
