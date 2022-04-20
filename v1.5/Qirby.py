@@ -1,5 +1,6 @@
 #from functools import _Descriptor, update_wrapper
 from asyncio.events import TimerHandle
+from re import A
 import discord
 import nextcord
 import random
@@ -16,13 +17,13 @@ import psutil
 import time
 import aiohttp
 import urllib
+import aiosqlite
 #Imports que talvez sejam usados no futuro, não sei
 from typing import ValuesView
 import asyncio
 from nextcord.user import User
 import json
 import DiscordUtils
-#from discord_slash import SlashCommand
 # Testes:
 import youtube_dl
 import os
@@ -68,6 +69,10 @@ async def on_ready():
     print('Funcionando!')
     status_swap.start()
     uptimeCounter.start()
+    setattr(client, "db", await aiosqlite.connect('level.db'))
+    await asyncio.sleep(3)
+    async with client.db.cursor() as cursor:
+        await cursor.execute("CREATE TABLE IF NOT EXISTS levels (level INTEGER, xp INTEGER, user INTEGER, guild INTEGER)")
     
 
 #Loop de status, recebe a lista acima e muda a cada 120 segundos
@@ -105,7 +110,6 @@ async def uptimeCounter():
             if th == 24:
                 th = 0
                 td += 1
-
 #Essa parte garante que o contador nao vai começar antes do bot estar online
 @uptimeCounter.before_loop
 async def beforeUptimeCounter():
@@ -122,6 +126,8 @@ async def stats(ctx):
     embed.add_field(name="CPU:", value=f"{psutil.cpu_percent()}%", inline=True)
     embed.add_field(name="RAM:", value=f"{psutil.virtual_memory()[2]}%", inline=True)
     await ctx.send(embed=embed)
+
+
 
 @client.command(aliases=['join', 'summon', 'entra', 'oi'])
 async def entre(ctx):
@@ -227,12 +233,6 @@ async def stop(ctx):
     await player.stop()
     await ctx.send("Parei a música e limpei a playlist!")
     await ctx.message.add_reaction("🟥") 
-
-'''
-@slash.slash(description="Mostra a latência do bot")
-async def latencia(ctx):
-    await ctx.send(f'Ping de {round(client.latency * 1000)} ms!')
-'''
 
 #Comando bola oito funciona como aquela "bola mágica" que responde uma pergunta que o usuário faça
 @client.command(aliases=['8ball','8b'])
@@ -347,10 +347,6 @@ async def clear(ctx, quantidade=11):
         await ctx.channel.purge(limit=quantidade)
         await ctx.send('**Limpo!** 🧹')
         await ctx.message.add_reaction("🧹")
-
-@client.command()
-async def tormenta(ctx):
-    await ctx.send('https://tormenta.analuiza84.repl.co/')
     
 '''
 #Essa parte do código não é tao importante, teoriacamente ele mutaria um usuário do server criando um cargo, mas n funciona e eu nao acho tao necessária agora.
@@ -386,7 +382,7 @@ async def help(ctx):
     await ctx.author.send('**AJUDA DO QIRBY**\nuiuuuu uiuuuuu\n**Lista dos meus comandos:**\n\n- `/ping` -> Mostra meu ping, meu tempo de resposta...\n- `/stats` -> Mostra meus status, o tempo que estou ligado e os dados da máquina que me hospeda\n- `/entre [join, summon, entra, oi]` -> Me coloca na chamada :D\n- `/saia [disconnect, d, leave, sair, tchau]` -> Me manda embora da conversa :(\n- `/play [p] <link ou nome>` -> Toco a música que quiser\n- `/queue [playlist, q]` -> Mostra todas as músicas que armazenei, desde a que está tocando agora, até a última da fila\n- `/pause` -> Pausa a música\n- `/resume [toque]` -> Volta a tocar a música que estava pausada\n- `/loop` - Coloca a música atual em modo loop, ou seja, vai ficar repetindo até que alguem pule ou mande parar\n- `/tocando [playing]` -> Mostra o nome da música atual\n- `/remove <numero>` -> Tira uma das músicas da playlist que criei, mas deve ser colocado um numero a menos, por exemplo, se você quiser tirar a segunda música da playlist, o comando seria: `/remove 1`, já que a contagem começa com 0\n- `/skip` -> Pula pra próxima música\n- `/stop` -> Para de tocar e limpa completamente a playlist\n- `/bolaoito [8ball, 8b] <pergunta>` -> Responde mágicamente uma pergunta de sim ou não que fizer para ela\n- `/pp` -> 👀')
     await ctx.author.send('\n- `/clear <número>` -> Apaga um certo número de mensagens do chat de texto, se não for especificado, 10 mensagens serão apagadas por padrão\n- `/help [ajuda]` -> **Sou eeeu! :D**, vou mandar uma mensagem pra você com todos os meus comandos!\n- `/level [nivel, lvl] <Membro>` -> Mostro o nível de alguem do server, a especificação so é necessária se quiser ver o nível de outra pessoa, para isso, precisa menciona-la. Mas se não mencionar, será exibido o seu nível\n- `/emoji <url> <nível>` -> Rouba, de outro server, ou adiciona um emoji no server, colocando primeiro o link de origem e logo depois, o nome que deseja\n- `/meme` -> Envia um meme no chat\n- `/bebel` -> 🥰\n- `/role [roll] <numero de dados> <numero do dado>` -> Rola quantos dados, de qualquer número, que você quiser, por exemplo, para rolar 4d5 seria `/role 4 5`\n- `/jogodavelha [jdv, v, velha] <Player 1> <Player 2>` -> Como o próprio nome ja diz, é o jogo da velha... Pra começar o jogo, basta chamar o comando e marcar ambos os jogadores logo depois. O jogo funciona com o comando abaixo\n- `/jogar [j] <posição>` -> Um complemento do jogo da velha, você usa esse comando pra dizer pra mim onde quer jogar...\n\nBom, é isso... Qualquer dúvida pode chamar o <@319850719228329985> caso tenha alguma dúvida. Até a próxima :D')
     await ctx.message.add_reaction("🚑")
-
+'''
 @client.event
 async def on_member_join(member):
     with open('users.json', 'r') as f:
@@ -396,7 +392,69 @@ async def on_member_join(member):
 
     with open('users.json', 'w') as f:
         json.dump(users, f, indent=4)
+'''
+#Nova versão do sistema de nível:
+@client.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    await client.process_commands(message)
+    author = message.author
+    guild = message.guild
+    async with client.db.cursor() as cursor:
+        await cursor.execute("SELECT xp FROM levels WHERE user = ? AND guild = ?", (author.id, guild.id,))
+        xp = await cursor.fetchone()
+        await cursor.execute("SELECT level FROM levels WHERE user = ? AND guild = ?", (author.id, guild.id,))
+        level = await cursor.fetchone()
+        
+        if not xp or not level:
+            await cursor.execute("INSERT INTO levels(level, xp, user, guild) VALUES (?, ?, ?, ?)", (0, 0, author.id, guild.id,))
 
+        try:
+            xp = xp[0]
+            level = level[0]
+        except TypeError:
+            xp = 0
+            level = 0
+
+        if level < 5:
+            xp += random.randint(1,3)
+            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (xp, author.id, guild.id))
+        else:
+            rand = random.randint(1, (level//4))
+            if rand == 1:
+                xp += random.randint(1,3)
+                await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (xp, author.id, guild.id))
+        if xp >= 100:
+            level = level+1
+            await cursor.execute("UPDATE levels SET level = ? WHERE user = ? AND guild = ?", (level, author.id, guild.id,))
+            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (0, author.id, guild.id,))
+            await message.channel.send(f'🎉 {author.mention} subiu de nível!!! Nível - {level} 🎉')
+    await client.db.commit()
+
+@client.command(aliases=['lvl'])
+async def level(ctx, member:nextcord.Member = None):
+    if member is None:
+        member = ctx.author
+    async with client.db.cursor() as cursor:
+        await cursor.execute("SELECT xp FROM levels WHERE user = ? AND guild = ?", (member.id, ctx.guild.id,))
+        xp = await cursor.fetchone()
+        await cursor.execute("SELECT level FROM levels WHERE user = ? AND guild = ?", (member.id, ctx.guild.id,))
+        level = await cursor.fetchone()
+        
+        if not xp or not level:
+            await cursor.execute("INSERT INTO levels(level, xp, user, guild) VALUES (?, ?, ?, ?)", (0, 0, member.id, ctx.guild.id,))
+        try:
+            xp = xp[0]
+            level = level[0]
+        except TypeError:
+            xp = 0
+            level = 0  
+    await ctx.send(f"Nível de {member.name} Level: `{level}`, XP: `{xp}`")
+    em = nextcord.Embed(title=f"Nível de {member.name}", description=f"Level: `{level}`\nXP: `{xp}`", color=nextcord.Color.magenta())
+    await ctx.send(embed=em)
+'''
+#Antiga versão do sistema de nível:
 @client.event
 async def on_message(message):
     if message.author.bot == False:
@@ -448,7 +506,7 @@ async def level(ctx, member: nextcord.Member = None):
         lvl = users[str(id)]['level']
         await ctx.send(f'{member} está no nível {lvl}!')
         await ctx.message.add_reaction("⬆️")
-
+'''
 @client.command()
 async def emoji(ctx, url:str, *,name):
     guild = ctx.guild
@@ -654,7 +712,7 @@ async def volume(ctx, vol):
     await ctx.send(f"Mudei o volume de `{song.name}` para {volume*100}%")
     await ctx.message.add_reaction("🔊")
 
-'''        
+'''      
 #Mensagens de possíveis erros de usuarios nos comandos:
 @client.event
 async def on_command_error(ctx, error):
@@ -723,7 +781,6 @@ async def command_error(ctx, error):
             await ctx.send("Desculpa, não conheço esse comando... :pensive:")
 
 '''
-
 
 #Token:
 client.run('ODg3ODQzNjM4OTg4NjQwMzA2.YUKC0g.wumQs4Hr8qjwYc8dSN9bnbWtelE')
