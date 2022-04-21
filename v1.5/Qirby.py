@@ -76,7 +76,7 @@ async def on_ready():
     setattr(client, "db", await aiosqlite.connect('level.db'))
     await asyncio.sleep(3)
     async with client.db.cursor() as cursor:
-        await cursor.execute("CREATE TABLE IF NOT EXISTS levels (level INTEGER, xp INTEGER, user INTEGER, guild INTEGER)")
+        await cursor.execute("CREATE TABLE IF NOT EXISTS levels (level INTEGER, xp INTEGER, user INTEGER)")
     
 
 #Loop de status, recebe a lista acima e muda a cada 120 segundos
@@ -404,15 +404,14 @@ async def on_message(message):
         return
     await client.process_commands(message)
     author = message.author
-    guild = message.guild
     async with client.db.cursor() as cursor:
-        await cursor.execute("SELECT xp FROM levels WHERE user = ? AND guild = ?", (author.id, guild.id,))
+        await cursor.execute("SELECT xp FROM levels WHERE user = ?", (author.id,))
         xp = await cursor.fetchone()
-        await cursor.execute("SELECT level FROM levels WHERE user = ? AND guild = ?", (author.id, guild.id,))
+        await cursor.execute("SELECT level FROM levels WHERE user = ?", (author.id,))
         level = await cursor.fetchone()
         
         if not xp or not level:
-            await cursor.execute("INSERT INTO levels(level, xp, user, guild) VALUES (?, ?, ?, ?)", (0, 0, author.id, guild.id,))
+            await cursor.execute("INSERT INTO levels(level, xp, user) VALUES (?, ?, ?)", (0, 0, author.id,))
 
         try:
             xp = xp[0]
@@ -423,16 +422,16 @@ async def on_message(message):
 
         if level < 5:
             xp += random.randint(1,3)
-            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (xp, author.id, guild.id))
+            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ?", (xp, author.id))
         else:
             rand = random.randint(1, (level//4))
             if rand == 1:
                 xp += random.randint(1,3)
-                await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (xp, author.id, guild.id))
+                await cursor.execute("UPDATE levels SET xp = ? WHERE user = ?", (xp, author.id))
         if xp >= 100:
             level = level+1
-            await cursor.execute("UPDATE levels SET level = ? WHERE user = ? AND guild = ?", (level, author.id, guild.id,))
-            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (0, author.id, guild.id,))
+            await cursor.execute("UPDATE levels SET level = ? WHERE user = ?", (level, author.id,))
+            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (0, author.id,))
             await message.channel.send(f'🎉 {author.mention} subiu de nível!!! Nível - {level} 🎉')
     await client.db.commit()
 
