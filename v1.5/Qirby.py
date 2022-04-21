@@ -1,6 +1,9 @@
 #from functools import _Descriptor, update_wrapper
 from asyncio.events import TimerHandle
+from asyncio.proactor_events import _ProactorBasePipeTransport
+from fileinput import filename
 from re import A
+from turtle import back
 import discord
 import nextcord
 import random
@@ -24,6 +27,7 @@ import asyncio
 from nextcord.user import User
 import json
 import DiscordUtils
+from easy_pil import *
 # Testes:
 import youtube_dl
 import os
@@ -36,7 +40,7 @@ import os
 #Prefixo dos comando
 # OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
 # Link: https://youtu.be/glo9R7JGkRE
-client = commands.Bot(command_prefix='/')
+client = commands.Bot(command_prefix='.')
 
 music = DiscordUtils.Music()
 
@@ -449,10 +453,40 @@ async def level(ctx, member:nextcord.Member = None):
             level = level[0]
         except TypeError:
             xp = 0
-            level = 0  
-    await ctx.send(f"Nível de {member.name} Level: `{level}`, XP: `{xp}`")
-    em = nextcord.Embed(title=f"Nível de {member.name}", description=f"Level: `{level}`\nXP: `{xp}`", color=nextcord.Color.magenta())
-    await ctx.send(embed=em)
+            level = 0
+    
+    userData = {
+        "name": f"{member.name}#{member.discriminator}",
+        "xp": xp,
+        "level": level,
+        "next_level_xp": 100,
+        "porcentagem": xp,
+    }
+
+    background = Editor(Canvas((900, 300), color="#FF69B4"))
+    profile_picture = await load_image_async(str(member.avatar.url))
+    profile = Editor(profile_picture).resize((150, 150)).circle_image()
+    
+    fonte = Font.poppins(size=40)
+    fonte_size = Font.poppins(size=30)
+
+    card_right_shape = [(600, 0), (750, 300), (900,300), (900, 0)]
+    background.polygon(card_right_shape, color="#FFFFFF")
+    background.paste(profile, (30, 30))
+
+    background.rectangle((30, 220), width=650, height=40, color="#FFFFFF", radius=30,)
+    background.bar((30, 220), max_width=650, height=40, percentage=userData['porcentagem'], color="#F61E61", radius=30,)
+    background.text((200,40), userData['name'], font=fonte_size, color="#FFFFFF")
+
+    background.rectangle((200, 100), width=350, height=2, fill="#FFFFFF")
+    background.text(
+        (200, 130), 
+        f"Nível - {userData['level']} | XP - {userData['xp']}/{userData['next_level_xp']}",
+        font = fonte_size,
+        color="#FFFFFF",)
+    arquivo = nextcord.File(fp=background.image_bytes, filename="levelcard.png")
+    await ctx.send(file=arquivo)
+
 '''
 #Antiga versão do sistema de nível:
 @client.event
