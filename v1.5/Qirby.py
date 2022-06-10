@@ -1,36 +1,17 @@
-#from functools import _Descriptor, update_wrapper
-from asyncio.events import TimerHandle
-from asyncio.proactor_events import _ProactorBasePipeTransport
-from fileinput import filename
-from re import A
-from turtle import back
-import discord
 import nextcord
 import random
-from nextcord import voice_client
-from nextcord import member
-from nextcord.channel import VoiceChannel
-from nextcord.colour import Color
-from nextcord.embeds import Embed
 from nextcord.ext import commands, tasks
 from nextcord.ext.commands.core import command
 from itertools import count, cycle
 from io import BytesIO
 import psutil
-import time
 import aiohttp
 import urllib
 import aiosqlite
-#Imports que talvez sejam usados no futuro, não sei
-from typing import ValuesView
 import asyncio
-from nextcord.user import User
 import json
 import DiscordUtils
 from easy_pil import *
-# Testes:
-import youtube_dl
-import os
 #C:\Users\caion\AppData\Local\Programs\Python\Python38-32\Lib\site-packages\DiscordUtils
 
 #Instalaçoes Manuais:
@@ -40,7 +21,7 @@ import os
 #Prefixo dos comando
 # OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
 # Link: https://youtu.be/glo9R7JGkRE
-client = commands.Bot(command_prefix='.')
+client = commands.Bot(command_prefix='/')
 
 music = DiscordUtils.Music()
 
@@ -53,17 +34,14 @@ client.remove_command("help")
 Coisas Legais pra atualizações futuras:
 Observação: Se o Qirby ficar instalado em mts servers, usar o Shards vai melhorar o desempenho:
 client = commands.AutoShardedBot(shard_count=10, command_prefix='/')
-
 '''
+
 #Lista de Status diferentes do Kirby
 status = cycle([
     'Oi :D',
-    'So no meme :P',
     'Ouvindo Música',
     'Dizendo como a Bebel é linda',
-    'Assistindo todos os filmes do Homem-Aranha, de novo',
-    '/help | /ajuda... ou chama o Moura ai',
-    'https://youtu.be/dQw4w9WgXcQ'
+    ';help',
     '👁️',
 ])
 
@@ -76,7 +54,7 @@ async def on_ready():
     setattr(client, "db", await aiosqlite.connect('level.db'))
     await asyncio.sleep(3)
     async with client.db.cursor() as cursor:
-        await cursor.execute("CREATE TABLE IF NOT EXISTS levels (level INTEGER, xp INTEGER, user INTEGER)")
+        await cursor.execute("CREATE TABLE IF NOT EXISTS levels (level INTEGER, xp INTEGER, user INTEGER, guild)")
     
 
 #Loop de status, recebe a lista acima e muda a cada 120 segundos
@@ -310,33 +288,6 @@ async def noia(ctx):
     await ctx.reply(f'Quão noia você é? {random.choice(noia)}')
     await ctx.message.add_reaction("😎")
 
-'''
-#Os comandos abaixo servem pra kickar e banir do servidor, não da chamada... Achei interessante então fiz, mas é poderoso demais,
-#não vou aplicar na versão final, por agora. Quem sabe tenha um de disconectar que tenha a mesma estrutura...
-#Sintaxe: /kick(ou ban) <@usuário> <possível justificatica, se houver>
-@client.command()
-async def kick(ctx, member:discord.Member, *, reason=None):
-    await member.kick(reason=reason)
-    await ctx.send(f'{member.member} foi chutado pra fora!')
-@client.command()
-async def ban(ctx, member:discord.Member, *, reason=None):
-    await member.ban(reason=reason)
-    await ctx.send(f'{member.member} foi **BANIDO!**')
-#Comando que retira o ban de um usuário
-#Sintaxe: /unban <NomeUsuário#Tag>
-@client.command()
-async def unban(ctx, *, member):
-    membros_banidos = await ctx.guild.bans()
-    member_name, member_discriminator = member.split('#')
-    for ban_entry in membros_banidos:
-        user = ban_entry.user
-        if(user.name, user.discriminator) == (member_name, member_discriminator):
-            await ctx.guild.unban(user)
-            #Menciona um usuário :D
-            await ctx.send(f'{user.mention} foi desbanido do servidor')
-            return
-'''
-
 #Comando /clear vai apagar um número especíco de mensagens no canal de texto, por padrão é 10
 #O usuário pode escolher a quantidade, desde que não passe de 100
 @client.command()
@@ -352,32 +303,6 @@ async def clear(ctx, quantidade=11):
         await ctx.send('**Limpo!** 🧹')
         await ctx.message.add_reaction("🧹")
     
-'''
-#Essa parte do código não é tao importante, teoriacamente ele mutaria um usuário do server criando um cargo, mas n funciona e eu nao acho tao necessária agora.
-# Acho que nem ta funcionando direito pra ser sincero e eu não quero arrumar. Tem algumas partes importantes tipo mandar mensagem privada, que eu vou acabar usando
-# depois, e criação/atribuição de cargo ao user. Por enquanto vai ficar aqui, quem sabe eu tire depois. Caso mude de ideia no futuro, tmb tem o comando de unban.
-#Link: https://youtu.be/l_pxUTDlzaM
-@client.command()
-async def mute(ctx, member:discord.Member, *, reason='Não justificado'):
-    #Checagem de permissão:
-    if(not ctx.author.guild_permissions.manage_messages):
-        await ctx.send('Você não tem a permissão necessária para isso...')
-        return
-    guild = ctx.guild
-    muteRole = discord.utils.get(guild.roles, name="muted")
-    #Cria um novo cargo
-    if not muteRole:
-        muteRole = await guild.create_role(name="Muted")
-    #As permissões do cargo criado:
-        for channel in guild.channels:
-            await ctx.send('Nenhum cargo foi achado. Criando....')
-            await channel.set_permissions(muteRole, speak=False, send_messages=False, read_message_history=True, read_messages=True)
-    #Adiciona cargo ao usuário:
-    await member.add_roles(muteRole, reason = reason)
-    
-    #Manda mensagem privada pro usuário, isso é bom :D
-    await member.send(f'Você foi mutado do **{guild.name}** | Justificativa: **{reason}**')
-'''
     
 #Comando de ajuda, depois atualizar e mandar mensagem privada com os comandos pra quem pediu
 @client.command(aliases=['ajuda'])
@@ -431,7 +356,7 @@ async def on_message(message):
         if xp >= 100:
             level = level+1
             await cursor.execute("UPDATE levels SET level = ? WHERE user = ?", (level, author.id,))
-            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ? AND guild = ?", (0, author.id,))
+            await cursor.execute("UPDATE levels SET xp = ? WHERE user = ?", (0, author.id,))
             await message.channel.send(f'🎉 {author.mention} subiu de nível!!! Nível - {level} 🎉')
     await client.db.commit()
 
@@ -440,13 +365,13 @@ async def level(ctx, member:nextcord.Member = None):
     if member is None:
         member = ctx.author
     async with client.db.cursor() as cursor:
-        await cursor.execute("SELECT xp FROM levels WHERE user = ? AND guild = ?", (member.id, ctx.guild.id,))
+        await cursor.execute("SELECT xp FROM levels WHERE user = ?", (member.id,))
         xp = await cursor.fetchone()
-        await cursor.execute("SELECT level FROM levels WHERE user = ? AND guild = ?", (member.id, ctx.guild.id,))
+        await cursor.execute("SELECT level FROM levels WHERE user = ?", (member.id,))
         level = await cursor.fetchone()
         
         if not xp or not level:
-            await cursor.execute("INSERT INTO levels(level, xp, user, guild) VALUES (?, ?, ?, ?)", (0, 0, member.id, ctx.guild.id,))
+            await cursor.execute("INSERT INTO levels(level, xp, user) VALUES (?, ?, ?)", (0, 0, member.id,))
         try:
             xp = xp[0]
             level = level[0]
@@ -485,6 +410,22 @@ async def level(ctx, member:nextcord.Member = None):
         color="#FFFFFF",)
     arquivo = nextcord.File(fp=background.image_bytes, filename="levelcard.png")
     await ctx.send(file=arquivo)
+
+
+@client.command(aliases=['lb', 'lvlboard'])
+async def leaderboard(ctx):
+    async with client.db.cursor() as cursor:
+        await cursor.execute("SELECT level, xp, user FROM levels WHERE guild=? ORDER BY level DESC, xp DESC LIMIT 5", (ctx.guild.id,))
+        data = await cursor.fetchall()
+        if data:
+            em = nextcord.Embed(title='LeaderBoard')
+            count = 0
+            for table in data:
+                count += 1
+                user = ctx.guild.get_member(table[2])
+                em.add_field(name=f"{count}. {user.name}", value=f"Level - **{table[0]}** | XP - **{table[1]}**", inline=False)
+            return await ctx.send(embed=em)
+        return await ctx.send('no bitches?')
 
 '''
 #Antiga versão do sistema de nível:
