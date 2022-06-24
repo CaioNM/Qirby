@@ -757,4 +757,4 @@ async def command_error(ctx, error):
 '''
 
 #Token:
-client.run('ODg3ODQzNjM4OTg4NjQwMzA2.YUKC0g.wumQs4Hr8qjwYc8dSN9bnbWtelE')
+client.run('token')
