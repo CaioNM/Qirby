@@ -25,22 +25,15 @@ async def node_connect():
 
 @client.event
 async def on_wavelink_track_end(player: wavelink.Player, track: wavelink.Track, reason):
-    ctx = player.ctx
-    vc: player = ctx.voice_client
-
-    if vc.loop:
-        return await vc.play(track)
+  ctx = player.ctx
+  vc: player = ctx.voice_client
     
-    print("Track ended, next is playing = ",vc.is_playing())
-
-    try:
-        next_song = vc.queue.get()
-        await vc.play(next_song)
-        await ctx.send(f"Now playing: {next_song.title}")
-    except:
-        #An exception when after the track end, the queue is now empty. If you dont do this, it will get error.
-        await vc.stop()
-        print("Queue Empty and stopped, is playing = ",vc.is_playing())
+  if vc.loop:
+    return await vc.play(track)
+    
+  next_song = vc.queue.get()
+  await vc.play(next_song)
+  await ctx.send(f"Now playing: {next_song.title}")
 
 
 @client.command(aliases=['join', 'summon', 'entra', 'oi'])
@@ -59,18 +52,22 @@ async def entre(ctx):
 async def play(ctx: commands.Context, *, search: wavelink.YouTubeTrack):
   if not ctx.voice_client:
     vc: wavelink.Player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
-  elif not ctx.author.voice:
-    return await ctx.send("entra num canal")
+  elif not getattr(ctx.author.voice, "channel", None):
+    return await ctx.send("You need to join a VC to play music.")
   else:
     vc: wavelink.Player = ctx.voice_client
-  if vc.queue.is_empty and vc.is_playing():
+    
+  if vc.queue.is_empty and not vc.is_playing():
     await vc.play(search)
-    await ctx.send(f"playin: `{search.title}`")
+    await ctx.send(f"Now Playing: {search.title}")
   else:
     await vc.queue.put_wait(search)
-    await ctx.send(f"Adicionei `{search.title}` na fila")
+    await ctx.send(f"Added `{search.title}` to the queue")
+    
   vc.ctx = ctx
   setattr(vc, "loop", False)
+    
+  print("Playing a song")
 
 
 @client.command()
