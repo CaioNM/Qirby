@@ -1,7 +1,10 @@
 from pydoc import cli
+import re
+from idna import valid_contextj
 import nextcord
 from nextcord.ext import commands
 import wavelink
+import datetime
 
 client = commands.Bot(command_prefix='/')
 
@@ -30,10 +33,12 @@ async def on_wavelink_track_end(player: wavelink.Player, track: wavelink.Track, 
     
   if vc.loop:
     return await vc.play(track)
-    
+
   next_song = vc.queue.get()
   await vc.play(next_song)
-  await ctx.send(f"Now playing: {next_song.title}")
+  emb = nextcord.Embed(description=f"Now playing **{next_song.title}**",color=nextcord.Color.magenta())
+  emb.set_image(url=next_song.thumbnail)
+  await ctx.send(embed=emb) 
 
 
 @client.command(aliases=['join', 'summon', 'entra', 'oi'])
@@ -53,21 +58,24 @@ async def play(ctx: commands.Context, *, search: wavelink.YouTubeTrack):
   if not ctx.voice_client:
     vc: wavelink.Player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
   elif not getattr(ctx.author.voice, "channel", None):
-    return await ctx.send("You need to join a VC to play music.")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro! :D")
   else:
     vc: wavelink.Player = ctx.voice_client
     
   if vc.queue.is_empty and not vc.is_playing():
     await vc.play(search)
-    await ctx.send(f"Now Playing: {search.title}")
+    embe = nextcord.Embed(description=f"Now playing [{search.title}]({search.uri}) ",color=nextcord.Color.magenta())
+    embe.set_image(url=search.thumbnail)
+    await ctx.send(embed=embe)
   else:
     await vc.queue.put_wait(search)
-    await ctx.send(f"Added `{search.title}` to the queue")
+    emb = nextcord.Embed(description=f"Added [{search.title}]({search.uri}) to the queue.",color=nextcord.Color.magenta())
+  
+    emb.set_image(url=search.thumbnail)
+    await ctx.send(embed=emb)
     
   vc.ctx = ctx
   setattr(vc, "loop", False)
-    
-  print("Playing a song")
 
 
 @client.command()
@@ -88,13 +96,14 @@ async def pause(ctx: commands.Context):
 @client.command()
 async def resume(ctx:commands.Context):
   if not ctx.voice_client:
-    return await ctx.send("nada tocando")
+    embed=nextcord.Embed(description=f"Não tem nada tocando...",color=nextcord.Color.magenta())
+    return await ctx.send(embed=embed)
   elif not getattr(ctx.author.voice, "channel", None):
-    return await ctx.send("nao ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro! :D")
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.resume()
-  await ctx.send("voltou a tocar")
+  await ctx.send(f"{vc.track.title} voltou a tocar")
 
 @client.command()
 async def stop(ctx:commands.Context):
@@ -144,7 +153,7 @@ async def queue(ctx: commands.Context):
     vc: wavelink.Player = ctx.voice_client
   if vc.queue.is_empty:
     return await ctx.send("Fila vazia")
-  em = nextcord.Embed(title="Playlist")
+  em = nextcord.Embed(title="Playlist", color=nextcord.Color.magenta())
   queue = vc.queue.copy()
   song_count = 0
   for song in queue:
@@ -152,6 +161,38 @@ async def queue(ctx: commands.Context):
     em.add_field(name=f"Número {song_count}", value=f"`{song.title}`")
   return await ctx.send(embed=em)
 
+@client.command()
+async def volume(ctx: commands.Context, volume: int):
+  if not ctx.voice_client:
+    return await ctx.send("Não to num canal")
+  elif not getattr(ctx.voice_client, "channel", None):
+    return await ctx.send("vc nem ta num canal")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  
+  if volume>100:
+    return await ctx.send("Isso é muuuuito alto")
+  elif volume<0:
+    return await ctx.send("Isso é muuuuito baixo")
+  await ctx.send(f"Volume mudado para `{volume}%`")
+  return await vc.set_volume(volume)
+
+@client.command()
+async def tocando(ctx: commands.Context):
+  if not ctx.voice_client:
+    return await ctx.send("Não to num canal")
+  elif not getattr(ctx.voice_client, "channel", None):
+    return await ctx.send("vc nem ta num canal")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  if not vc.is_playing():
+    return await ctx.send("Nada tocando agora")
+  
+  em = nextcord.Embed(title=f"Tocando: **{vc.track.title}**", description=f"Artista: **{vc.track.author}**", color=nextcord.Color.magenta())
+  em.add_field(name="Duração:", value=f"{str(datetime.timedelta(seconds=vc.track.length ))}")
+  em.add_field(name="Source:", value=f"Link: [Click me]({str(vc.track.uri)})")
+  return await ctx.send(embed=em)
+
 #Token:
-client.run('ODg3ODQzNjM4OTg4NjQwMzA2.YUKC0g.wumQs4Hr8qjwYc8dSN9bnbWtelE')
+client.run("Token")
 
