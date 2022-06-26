@@ -311,17 +311,8 @@ async def help(ctx):
     await ctx.author.send('**AJUDA DO QIRBY**\nuiuuuu uiuuuuu\n**Lista dos meus comandos:**\n\n- `/ping` -> Mostra meu ping, meu tempo de resposta...\n- `/stats` -> Mostra meus status, o tempo que estou ligado e os dados da máquina que me hospeda\n- `/entre [join, summon, entra, oi]` -> Me coloca na chamada :D\n- `/saia [disconnect, d, leave, sair, tchau]` -> Me manda embora da conversa :(\n- `/play [p] <link ou nome>` -> Toco a música que quiser\n- `/queue [playlist, q]` -> Mostra todas as músicas que armazenei, desde a que está tocando agora, até a última da fila\n- `/pause` -> Pausa a música\n- `/resume [toque]` -> Volta a tocar a música que estava pausada\n- `/loop` - Coloca a música atual em modo loop, ou seja, vai ficar repetindo até que alguem pule ou mande parar\n- `/tocando [playing]` -> Mostra o nome da música atual\n- `/remove <numero>` -> Tira uma das músicas da playlist que criei, mas deve ser colocado um numero a menos, por exemplo, se você quiser tirar a segunda música da playlist, o comando seria: `/remove 1`, já que a contagem começa com 0\n- `/skip` -> Pula pra próxima música\n- `/stop` -> Para de tocar e limpa completamente a playlist\n- `/bolaoito [8ball, 8b] <pergunta>` -> Responde mágicamente uma pergunta de sim ou não que fizer para ela\n- `/pp` -> 👀')
     await ctx.author.send('\n- `/clear <número>` -> Apaga um certo número de mensagens do chat de texto, se não for especificado, 10 mensagens serão apagadas por padrão\n- `/help [ajuda]` -> **Sou eeeu! :D**, vou mandar uma mensagem pra você com todos os meus comandos!\n- `/level [nivel, lvl] <Membro>` -> Mostro o nível de alguem do server, a especificação so é necessária se quiser ver o nível de outra pessoa, para isso, precisa menciona-la. Mas se não mencionar, será exibido o seu nível\n- `/emoji <url> <nível>` -> Rouba, de outro server, ou adiciona um emoji no server, colocando primeiro o link de origem e logo depois, o nome que deseja\n- `/meme` -> Envia um meme no chat\n- `/bebel` -> 🥰\n- `/role [roll] <numero de dados> <numero do dado>` -> Rola quantos dados, de qualquer número, que você quiser, por exemplo, para rolar 4d5 seria `/role 4 5`\n- `/jogodavelha [jdv, v, velha] <Player 1> <Player 2>` -> Como o próprio nome ja diz, é o jogo da velha... Pra começar o jogo, basta chamar o comando e marcar ambos os jogadores logo depois. O jogo funciona com o comando abaixo\n- `/jogar [j] <posição>` -> Um complemento do jogo da velha, você usa esse comando pra dizer pra mim onde quer jogar...\n\nBom, é isso... Qualquer dúvida pode chamar o <@319850719228329985> caso tenha alguma dúvida. Até a próxima :D')
     await ctx.message.add_reaction("🚑")
-'''
-@client.event
-async def on_member_join(member):
-    with open('users.json', 'r') as f:
-        users = json.load(f)
-    
-    await update_data(users, member)
 
-    with open('users.json', 'w') as f:
-        json.dump(users, f, indent=4)
-'''
+
 #Nova versão do sistema de nível:
 @client.event
 async def on_message(message):
@@ -757,4 +748,4 @@ async def command_error(ctx, error):
 '''
 
 #Token:
-client.run('Token')
+client.run('token')
