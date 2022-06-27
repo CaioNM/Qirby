@@ -1,3 +1,4 @@
+from ast import alias
 import re
 from turtle import color
 from idna import valid_contextj
@@ -18,63 +19,63 @@ class ControlPanel(nextcord.ui.View):
         self.vc = vc
         self.ctx = ctx
     
-  @nextcord.ui.button(label="Resume/Pause", style=nextcord.ButtonStyle.blurple)
+  @nextcord.ui.button(label="Pause/Play", style=nextcord.ButtonStyle.blurple)
   async def resume_and_pause(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
     if not interaction.user == self.ctx.author:
-      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa!", ephemeral=True)
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
     for child in self.children:
       child.disabled = False
     if self.vc.is_paused():
       await self.vc.resume()
-      await interaction.message.edit(content="Voltou a tocar!", view=self)
+      await interaction.message.edit(content="Voltou a tocar! ⏯️", view=self)
     else:
       await self.vc.pause()
-      await interaction.message.edit(content="Pausado!", view=self)
+      await interaction.message.edit(content="Pausado! ⏸️", view=self)
 
-  @nextcord.ui.button(label="Queue", style=nextcord.ButtonStyle.blurple)
+  @nextcord.ui.button(label="Playlist", style=nextcord.ButtonStyle.green)
   async def queue(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
     if not interaction.user == self.ctx.author:
-      return await interaction.response.send_message("You can't do that. run the command yourself to use these buttons", ephemeral=True)
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
     for child in self.children:
       child.disabled = False
     button.disabled = True
     if self.vc.queue.is_empty:
-      return await interaction.response.send_message("the queue is empty smh", ephemeral=True)
+      return await interaction.response.send_message("A playlist ta vazia ❌", ephemeral=True)
     
-    em = nextcord.Embed(title="Queue")
+    em = nextcord.Embed(title="🎶 Playlist do Qirby 🎶", color=nextcord.Color.magenta())
     queue = self.vc.queue.copy()
     songCount = 0
 
     for song in queue:
       songCount += 1
-      em.add_field(name=f"Song Num {str(songCount)}", value=f"`{song}`")
+      em.add_field(name=f"Música nº {str(songCount)}.", value=f"`{song}`")
     await interaction.message.edit(embed=em, view=self)
     
   @nextcord.ui.button(label="Skip", style=nextcord.ButtonStyle.blurple)
   async def skip(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
     if not interaction.user == self.ctx.author:
-      return await interaction.response.send_message("You can't do that. run the command yourself to use these buttons", ephemeral=True)
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
     for child in self.children:
       child.disabled = False
     button.disabled = True
     if self.vc.queue.is_empty:
-      return await interaction.response.send_message("the queue is empty smh", ephemeral=True)
+      return await interaction.response.send_message("A playlist ta vazia ❌", ephemeral=True)
       
 
     try:
       await self.vc.stop()
     except Exception:
-      return await interaction.response.send_message("The queue is empty!", ephemeral=True)
+      return await interaction.response.send_message("A playlist ta vazia ❌", ephemeral=True)
      
     
   @nextcord.ui.button(label="Disconnect", style=nextcord.ButtonStyle.red)
   async def disconnect(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
     if not interaction.user == self.ctx.author:
-      return await interaction.response.send_message("You can't do that. run the command yourself to use these buttons", ephemeral=True)
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
     for child in self.children:
       child.disabled = True
     await self.vc.disconnect()
-    await interaction.message.edit(content="Disconnect :P", view=self)
+    await interaction.message.edit(content="Sai, até a próxima! 👋", view=self)
 
 async def node_connect():
   await client.wait_until_ready()
@@ -97,28 +98,32 @@ async def ping(ctx):
 
 @client.event
 async def on_wavelink_track_end(player: wavelink.Player, track: wavelink.YouTubeTrack, reason):
-        try:
-            ctx = player.ctx
-            vc: player = ctx.voice_client
-            
-        except nextcord.HTTPException:
-            interaction = player.interaction
-            vc: player = interaction.guild.voice_client
+      try:
+        ctx = player.ctx
+        vc: player = ctx.voice_client
         
-        if vc.loop:
-            return await vc.play(track)
+      except nextcord.HTTPException:
+        interaction = player.interaction
+        vc: player = interaction.guild.voice_client
+    
+      if vc.loop:
+        return await vc.play(track)
+    
+      if vc.queue.is_empty:
+        pass
 
-        
-        await vc.play(vc.queue.get())
-        try:
-          emb = nextcord.Embed(description=f"Now playing **{vc.queue.get().title}**",color=nextcord.Color.magenta())
-          emb.set_image(url=vc.queue.get().thumbnail)
-          await ctx.send(embed=emb)
-        except nextcord.HTTPException:
-          emb = nextcord.Embed(description=f"Now playing **{vc.queue.get().title}**",color=nextcord.Color.magenta())
-          emb.set_image(url=vc.queue.get().thumbnail)
-          await interaction.send(embed=emb)
-  
+      next_song = vc.queue.get()
+      await vc.play(next_song)
+      try:
+        embe = nextcord.Embed(description=f"Tocando: [{next_song.title}]({next_song.uri})",color=nextcord.Color.magenta())
+        embe.set_image(url=next_song.thumbnail)
+        await ctx.send(embed=embe)
+        await ctx.message.add_reaction("🎶")
+        #await ctx.send(f"Now playing: {next_song.title}")
+      except nextcord.HTTPException:
+        await interaction.send(f"Now playing: {next_song.title}")
+
+
 @client.command(aliases=['join', 'summon', 'entra', 'oi'])
 async def entre(ctx):
     voicetrue = ctx.author.voice
@@ -135,6 +140,7 @@ async def entre(ctx):
 async def play(ctx: commands.Context, *, search: wavelink.YouTubeTrack):
   if not ctx.voice_client:
     vc: wavelink.Player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+    await ctx.message.add_reaction("😊")
   elif not getattr(ctx.author.voice, "channel", None):
     await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro! :D")
   else:
@@ -142,15 +148,15 @@ async def play(ctx: commands.Context, *, search: wavelink.YouTubeTrack):
     
   if vc.queue.is_empty and not vc.is_playing():
     await vc.play(search)
-    embe = nextcord.Embed(description=f"Now playing [{search.title}]({search.uri}) ",color=nextcord.Color.magenta())
+    embe = nextcord.Embed(description=f"Tocando: [{search.title}]({search.uri})",color=nextcord.Color.magenta())
     embe.set_image(url=search.thumbnail)
     await ctx.send(embed=embe)
+    await ctx.message.add_reaction("🎶")
   else:
     await vc.queue.put_wait(search)
-    emb = nextcord.Embed(description=f"Added [{search.title}]({search.uri}) to the queue.",color=nextcord.Color.magenta())
-  
-    emb.set_image(url=search.thumbnail)
+    emb = nextcord.Embed(description=f"[{search.title}]({search.uri}) foi adicionado a playlist!",color=nextcord.Color.magenta())
     await ctx.send(embed=emb)
+    await ctx.message.add_reaction("🎶")
     
   vc.ctx = ctx
   setattr(vc, "loop", False)
@@ -186,58 +192,81 @@ async def play(interaction: Interaction, search: str = SlashOption(description="
 @client.command()
 async def pause(ctx: commands.Context):
   if not ctx.voice_client:
-    return await ctx.send("No music")
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("❌")
+    
   elif not getattr(ctx.author.voice, "channel", None):
-    return await ctx.send("Não ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.player = ctx.voice_client
     if vc.is_playing() is False:
-      await ctx.send("sla")    
+      embed=nextcord.Embed(description="Não foi possível pausar",color=nextcord.Color.magenta())
+      await ctx.send(embed=embed)
+      return await ctx.message.add_reaction("❌")  
     else:
       await vc.pause()
-      await ctx.send("pausado")
+      embed=nextcord.Embed(description=f"`{vc.track.title}` foi pausado, use `/resume` para voltar a tocar",color=nextcord.Color.magenta())
+      await ctx.send(embed=embed)
+      return await ctx.message.add_reaction("⏸️")
     
       
-@client.command()
+@client.command(aliases=["unpause"])
 async def resume(ctx:commands.Context):
   if not ctx.voice_client:
-    embed=nextcord.Embed(description=f"Não tem nada tocando...",color=nextcord.Color.magenta())
-    return await ctx.send(embed=embed)
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("❌")
   elif not getattr(ctx.author.voice, "channel", None):
-    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro! :D")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.resume()
-  await ctx.send(f"{vc.track.title} voltou a tocar")
+  embed=nextcord.Embed(description=f"**{vc.track.title}** voltou a tocar!",color=nextcord.Color.magenta())
+  await ctx.send(embed=embed)
+  return await ctx.message.add_reaction("⏯️")
 
 @client.command()
 async def skip(ctx:commands.Context):
   if not ctx.voice_client:
-    return await ctx.send("nada tocando")
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("❌")
   elif not getattr(ctx.author.voice, "channel", None):
-    return await ctx.send("nao ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.stop()
-  await ctx.send("pulou")
+  embed=nextcord.Embed(description=f"Pulei **{vc.track.title}**!",color=nextcord.Color.magenta())
+  await ctx.send(embed=embed)
+  await ctx.message.add_reaction("⏩")
 
 
 @client.command()
 async def stop(ctx:commands.Context):
   if not ctx.voice_client:
-    return await ctx.send("nada tocando")
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("❌")
   elif not getattr(ctx.author.voice, "channel", None):
-    return await ctx.send("nao ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.stop()
-  await ctx.send("parou de tocar")
+  embed=nextcord.Embed(description="Parei a música e limpei a playlist!",color=nextcord.Color.magenta())
+  await ctx.send(embed=embed)
+  await ctx.message.add_reaction("🟥")
   await vc.disconnect()
 
-@client.command()
-async def d(ctx:commands.Context):
+@client.command(aliases=['disconnect', 'd', 'leave', 'sair', 'tchau'])
+async def saia(ctx:commands.Context):
   if not getattr(ctx.author.voice, "channel", None):
-    return await ctx.send("nao ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.disconnect()
