@@ -79,7 +79,7 @@ class ControlPanel(nextcord.ui.View):
 
 async def node_connect():
   await client.wait_until_ready()
-  await wavelink.NodePool.create_node(bot=client, host='lavalink.oops.wtf', port=443, password='www.freelavalink.ga', https=True, spotify_client=spotify.SpotifyClient(client_id="1ddce87b42bd48f198c6a0961ad796c6", client_secret="baedf32e9a6c4bfd9df92022344532d5"))
+  await wavelink.NodePool.create_node(bot=client, host='lavalink.oops.wtf', port=443, password='www.freelavalink.ga', https=True, spotify_client=spotify.SpotifyClient(client_id="19103c83806b46918d9a49eb18f5bb7c", client_secret="d2031ed7a5b3456a93168c70f0fe2242"))
 
 @client.event
 async def on_ready():
@@ -224,7 +224,7 @@ async def resume(ctx:commands.Context):
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.resume()
-  embed=nextcord.Embed(description=f"**{vc.track.title}** voltou a tocar!",color=nextcord.Color.magenta())
+  embed=nextcord.Embed(description=f"`{vc.track.title}` voltou a tocar!",color=nextcord.Color.magenta())
   await ctx.send(embed=embed)
   return await ctx.message.add_reaction("⏯️")
 
@@ -240,8 +240,6 @@ async def skip(ctx:commands.Context):
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.stop()
-  embed=nextcord.Embed(description=f"Pulei **{vc.track.title}**!",color=nextcord.Color.magenta())
-  await ctx.send(embed=embed)
   await ctx.message.add_reaction("⏩")
 
 
@@ -365,7 +363,6 @@ async def splay(ctx: commands.Context, *, search: str):
         except Exception:
             setattr(vc, "loop", False) 
 
-#Aqui também
 @client.command()
 async def painel(ctx: commands.Context):
   if not ctx.voice_client:
