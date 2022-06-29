@@ -8,22 +8,24 @@ import psutil
 import aiohttp
 import urllib
 import aiosqlite
+#from replit import db
 import asyncio
 import json
-import DiscordUtils
 from easy_pil import *
 #C:\Users\caion\AppData\Local\Programs\Python\Python38-32\Lib\site-packages\DiscordUtils
+from ast import alias
+import re
+from turtle import color
+from idna import valid_contextj
+import nextcord
+from nextcord.ext import commands
+import wavelink
+import datetime
+from wavelink.ext import spotify
+from nextcord import Interaction, SlashOption, ChannelType
+from nextcord.abc import GuildChannel
 
-#Instalaçoes Manuais:
-#pip install DiscordUtils[voice]
-#pip install DiscordUtils
-
-#Prefixo dos comando
-# OBS.: tem um modo de mudar o prefixo pra um servidor específico, mas por padrão é melhor deixar o mesmo, caso mude de ideia: Episode 6 - Server Prefixes!!!
-# Link: https://youtu.be/glo9R7JGkRE
 client = commands.Bot(command_prefix='/')
-
-music = DiscordUtils.Music()
 
 #Remove o comando help pre-definido pela biblioteca para poder usar personalizados
 client.remove_command("help")
@@ -45,16 +47,115 @@ status = cycle([
     '👁️',
 ])
 
+class ControlPanel(nextcord.ui.View):
+  def __init__(self, vc, ctx):
+        super().__init__()
+        self.vc = vc
+        self.ctx = ctx
+    
+  @nextcord.ui.button(label="Pause/Play", style=nextcord.ButtonStyle.blurple)
+  async def resume_and_pause(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    if not interaction.user == self.ctx.author:
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
+    for child in self.children:
+      child.disabled = False
+    if self.vc.is_paused():
+      await self.vc.resume()
+      await interaction.message.edit(content="Voltou a tocar! ⏯️", view=self)
+    else:
+      await self.vc.pause()
+      await interaction.message.edit(content="Pausado! ⏸️", view=self)
+
+  @nextcord.ui.button(label="Playlist", style=nextcord.ButtonStyle.green)
+  async def queue(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    if not interaction.user == self.ctx.author:
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
+    for child in self.children:
+      child.disabled = False
+    button.disabled = True
+    if self.vc.queue.is_empty:
+      return await interaction.response.send_message("A playlist ta vazia ❌", ephemeral=True)
+    
+    em = nextcord.Embed(title="🎶 Playlist do Qirby 🎶", color=nextcord.Color.magenta())
+    queue = self.vc.queue.copy()
+    songCount = 0
+
+    for song in queue:
+      songCount += 1
+      em.add_field(name=f"Música nº {str(songCount)}.", value=f"`{song}`")
+    await interaction.message.edit(embed=em, view=self)
+    
+  @nextcord.ui.button(label="Skip", style=nextcord.ButtonStyle.blurple)
+  async def skip(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    if not interaction.user == self.ctx.author:
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
+    for child in self.children:
+      child.disabled = False
+    button.disabled = True
+    if self.vc.queue.is_empty:
+      return await interaction.response.send_message("A playlist ta vazia ❌", ephemeral=True)
+      
+
+    try:
+      await self.vc.stop()
+    except Exception:
+      return await interaction.response.send_message("A playlist ta vazia ❌", ephemeral=True)
+     
+    
+  @nextcord.ui.button(label="Disconnect", style=nextcord.ButtonStyle.red)
+  async def disconnect(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    if not interaction.user == self.ctx.author:
+      return await interaction.response.send_message("Você não pode usar o painel de outra pessoa! ❌", ephemeral=True)
+    for child in self.children:
+      child.disabled = True
+    await self.vc.disconnect()
+    await interaction.message.edit(content="Sai, até a próxima! 👋", view=self)
+
+async def node_connect():
+  await client.wait_until_ready()
+  await wavelink.NodePool.create_node(bot=client, host='lavalink.oops.wtf', port=443, password='www.freelavalink.ga', https=True, spotify_client=spotify.SpotifyClient(client_id="19103c83806b46918d9a49eb18f5bb7c", client_secret="d2031ed7a5b3456a93168c70f0fe2242"))
+
 #Teste de funcionamento do bot
 @client.event
 async def on_ready():
-    print('Funcionando!')
+    print('Qirby está online!')
     status_swap.start()
     uptimeCounter.start()
     setattr(client, "db", await aiosqlite.connect('level.db'))
     await asyncio.sleep(3)
     async with client.db.cursor() as cursor:
         await cursor.execute("CREATE TABLE IF NOT EXISTS levels (level INTEGER, xp INTEGER, user INTEGER, guild)")
+    client.loop.create_task(node_connect())  
+
+@client.event
+async def on_wavelink_node_ready(node: wavelink.Node):
+  print(f"Node {node.identifier} is ready!")
+
+@client.event
+async def on_wavelink_track_end(player: wavelink.Player, track: wavelink.YouTubeTrack, reason):
+  try:
+    ctx = player.ctx
+    vc: player = ctx.voice_client
+        
+  except nextcord.HTTPException:
+    interaction = player.interaction
+    vc: player = interaction.guild.voice_client
+    
+  if vc.loop:
+    return await vc.play(track)
+    
+  if vc.queue.is_empty:
+    pass
+
+  next_song = vc.queue.get()
+  await vc.play(next_song)
+  try:
+    embe = nextcord.Embed(description=f"Tocando: [{next_song.title}]({next_song.uri})",color=nextcord.Color.magenta())
+    embe.set_image(url=next_song.thumbnail)
+    await ctx.send(embed=embe)
+    await ctx.message.add_reaction("🎶")
+  except nextcord.HTTPException:
+    await interaction.send(f"Now playing: {next_song.title}")
     
 
 #Loop de status, recebe a lista acima e muda a cada 120 segundos
@@ -108,6 +209,7 @@ async def stats(ctx):
     embed.add_field(name="CPU:", value=f"{psutil.cpu_percent()}%", inline=True)
     embed.add_field(name="RAM:", value=f"{psutil.virtual_memory()[2]}%", inline=True)
     await ctx.send(embed=embed)
+    await ctx.message.add_reaction("🕓")
 
 
 
@@ -123,99 +225,175 @@ async def entre(ctx):
     
 
 @client.command(aliases=['disconnect', 'd', 'leave', 'sair', 'tchau'])
-async def saia(ctx):
-    voicetrue = ctx.author.voice
-    mevoicetrue = ctx.guild.me.voice
-    if voicetrue is None:
-        return await ctx.send('Você não está na call')
-    if mevoicetrue is None:
-        return await ctx.send('Mas eu nao to em um canal... ue')
-    await ctx.voice_client.disconnect()
-    await ctx.send('Sai, até a próxima!')
-    await ctx.message.add_reaction("👋") 
+async def saia(ctx:commands.Context):
+  if not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  await vc.disconnect()
+  await ctx.send("Sai, até a próxima!")
+  await ctx.message.add_reaction("👋") 
 
 #play
 @client.command(aliases=['p'])
-async def play(ctx, *, url):
-    player = music.get_player(guild_id=ctx.guild.id)
-    if ctx.guild.me.voice is None:
-        await ctx.author.voice.channel.connect()
-        await ctx.message.add_reaction("😊")
-    if not player:
-        player = music.create_player(ctx, ffmpeg_error_betterfix=True)
-    if not ctx.voice_client.is_playing():
-        await player.queue(url, search=True)
-        song = await player.play()
-        await ctx.send(f"Tocando `{song.name}`!")
-        await ctx.message.add_reaction("🎶")
+async def play(ctx: commands.Context, *, search: wavelink.YouTubeTrack):
+  if not ctx.voice_client:
+    vc: wavelink.Player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+    await ctx.message.add_reaction("😊")
+  elif not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro! :D")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+    
+  if vc.queue.is_empty and not vc.is_playing():
+    await vc.play(search)
+    embe = nextcord.Embed(description=f"Tocando: [{search.title}]({search.uri})",color=nextcord.Color.magenta())
+    embe.set_image(url=search.thumbnail)
+    await ctx.send(embed=embe)
+    await ctx.message.add_reaction("🎶")
+  else:
+    await vc.queue.put_wait(search)
+    emb = nextcord.Embed(description=f"[{search.title}]({search.uri}) foi adicionado a playlist!",color=nextcord.Color.magenta())
+    await ctx.send(embed=emb)
+    await ctx.message.add_reaction("🎶")
+    
+  vc.ctx = ctx
+  setattr(vc, "loop", False)
+
+@client.command()
+async def pause(ctx: commands.Context):
+  if not ctx.voice_client:
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+    
+  elif not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.player = ctx.voice_client
+    if vc.is_playing() is False:
+      embed=nextcord.Embed(description="Não foi possível pausar",color=nextcord.Color.magenta())
+      await ctx.send(embed=embed)
+      return await ctx.message.add_reaction("❌")  
     else:
-        song = await player.queue(url, search=True)
-        await ctx.reply(f"`{song.name}` foi adicionado a fila")
-        await ctx.message.add_reaction("🎶") 
+      await vc.pause()
+      embed=nextcord.Embed(description=f"[{vc.track.title}]({vc.track.uri}) foi pausado, use `/resume` para voltar a tocar",color=nextcord.Color.magenta())
+      await ctx.send(embed=embed)
+      return await ctx.message.add_reaction("⏸️")
 
-@client.command(aliases=['playlist', 'q'])
-async def queue(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    await ctx.send(f"{'   ➡️   '.join([song.name for song in player.current_queue()])}")
-
-@client.command()
-async def pause(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    song = await player.pause()
-    await ctx.send(f'`{song.name}` foi pausado(a)! :pause_button:')
-    await ctx.message.add_reaction("⏸️") 
-
-@client.command(aliases=['toque'])
-async def resume(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    song = await player.resume()
-    await ctx.send(f'`{song.name}` voltou a tocar!')
-    await ctx.message.add_reaction("⏯️") 
+@client.command(aliases=["unpause"])
+async def resume(ctx:commands.Context):
+  if not ctx.voice_client:
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+  elif not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  await vc.resume()
+  embed=nextcord.Embed(description=f"[{vc.track.title}]({vc.track.uri}) voltou a tocar!",color=nextcord.Color.magenta())
+  await ctx.send(embed=embed)
+  return await ctx.message.add_reaction("⏯️") 
 
 @client.command()
-async def loop(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    song = await player.toggle_song_loop()
-    if song.is_looping:
-        await ctx.message.add_reaction("♾️") 
-        return await ctx.send(f'{song.name} está em loop! :infinity:')
-        
-    else:
-        await ctx.message.add_reaction("🛑") 
-        return await ctx.send(f'{song.name} não está em loop! 🛑')
-
-@client.command(aliases=['playing'])
-async def tocando(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    song = player.now_playing()
-    if song is None:
-        await ctx.send('Não tem nada tocando...')
-    await ctx.send(song.name)
-    await ctx.message.add_reaction("🎧") 
-
-@client.command()
-async def remove(ctx, index):
-    player = music.get_player(guild_id=ctx.guild.id)
-    song = await player.remove_from_queue(int(index))
-    await ctx.send(f'Removi `{song.name}` da playlist!')
+async def loop(ctx: commands.Context):
+  if not ctx.voice_client:
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+  elif not ctx.author.voice:
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  try:
+    vc.loop ^= True
+  except Exception:
+    setattr(vc, "loop", False)
+  if vc.loop:
+    embed=nextcord.Embed(description=f"[{vc.track.title}]({vc.track.uri}) está em loop!",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("♾️")
+  else:
+    embed=nextcord.Embed(description=f"Loop foi desabilitado!",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🛑")
 
 @client.command()
-async def skip(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    data = await player.skip(force=True)
-    song = player.now_playing()
-    if len(data) == 2:
-        await ctx.send(f"Pulei `{song.name}`!")
-        await ctx.message.add_reaction("⏩")
+async def tocando(ctx: commands.Context):
+  if not ctx.voice_client:
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    await ctx.message.add_reaction("🔇")
+  elif not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  if not vc.is_playing():
+    embed=nextcord.Embed(description=f"Não tem nada tocando agora...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    await ctx.message.add_reaction("🔇")
+  
+  em = nextcord.Embed(title=f"Tocando: **{vc.track.title}**", description=f"Artista: **{vc.track.author}**", color=nextcord.Color.magenta())
+  em.add_field(name="Duração:", value=f"{str(datetime.timedelta(seconds=vc.track.length ))}")
+  em.add_field(name="Source:", value=f"Link: [Click me]({str(vc.track.uri)})")
+  await ctx.message.add_reaction("🎧") 
+  return await ctx.send(embed=em)
 
 @client.command()
-async def stop(ctx):
-    player = music.get_player(guild_id=ctx.guild.id)
-    player.queue = []
-    await player.stop()
-    await ctx.send("Parei a música e limpei a playlist!")
-    await ctx.message.add_reaction("🟥") 
+async def skip(ctx:commands.Context):
+  if not ctx.voice_client:
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+  elif not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  await vc.stop()
+  await ctx.message.add_reaction("⏩")
 
+@client.command()
+async def stop(ctx:commands.Context):
+  if not ctx.voice_client:
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+  elif not getattr(ctx.author.voice, "channel", None):
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  await vc.stop()
+  embed=nextcord.Embed(description="Parei a música e limpei a playlist!",color=nextcord.Color.magenta())
+  await ctx.send(embed=embed)
+  await ctx.message.add_reaction("🟥")
+  await vc.disconnect() 
+
+@client.command()
+async def queue(ctx: commands.Context):
+  if not ctx.voice_client:
+    return await ctx.send("naum to num canal")
+  elif not ctx.author.voice:
+    return await ctx.send("entra num canal primeiro")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  if vc.queue.is_empty:
+    return await ctx.send("Fila vazia")
+  em = nextcord.Embed(title="Playlist", color=nextcord.Color.magenta())
+  queue = vc.queue.copy()
+  song_count = 0
+  for song in queue:
+    song_count += 1
+    em.add_field(name=f"Número {song_count}", value=f"`{song.title}`")
+  return await ctx.send(embed=em)
+  
 #Comando bola oito funciona como aquela "bola mágica" que responde uma pergunta que o usuário faça
 @client.command(aliases=['8ball','8b'])
 @commands.cooldown(4, 45, commands.cooldowns.BucketType.user)
@@ -418,60 +596,7 @@ async def leaderboard(ctx):
             return await ctx.send(embed=em)
         return await ctx.send('no bitches?')
 
-'''
-#Antiga versão do sistema de nível:
-@client.event
-async def on_message(message):
-    if message.author.bot == False:
-        with open('users.json', 'r') as f:
-            user = json.load(f)
-    
-        await update_data(user, message.author)
-        await add_xp(user, message.author, 5)
-        await level_up(user, message.author, message)
 
-        with open('users.json', 'w') as f:
-            json.dump(user, f, indent=4)
-
-        await client.process_commands(message)
-
-async def update_data(users, user):
-    if not f'{user.id}' in users:
-        users[f'{user.id}'] = {}
-        users[f'{user.id}']['xp'] = 0
-        users[f'{user.id}']['level'] = 1
-
-async def add_xp(users, user, exp):
-    users[f'{user.id}']['xp'] += exp
-
-async def level_up(users, user, message):
-    with open('levels.json', 'r') as g:
-        levels = json.load(g)
-    xp = users[f'{user.id}']['xp']
-    lvl_start = users[f'{user.id}']['level']
-    lvl_end = int(xp ** (1/4))
-    if lvl_start < lvl_end:
-        await message.channel.send(f'🎉 {user.mention} subiu de nível!!! Nível - {lvl_end} 🎉')
-        users[f'{user.id}']['level'] = lvl_end
-
-@client.command(aliases=['nivel','lvl'])
-async def level(ctx, member: nextcord.Member = None):
-    if not member:
-        id = ctx.message.author.id
-        with open('users.json', 'r') as f:
-            users = json.load(f)
-        lvl = users[str(id)]['level']
-        xp=users[str(id)]['xp']
-        await ctx.send(f' Você está no nível {lvl} com {xp} de xp. Você mandou {xp/5} mensagens! :O')
-        await ctx.message.add_reaction("🥳")
-    else:
-        id = member.id
-        with open('users.json', 'r') as f:
-            users = json.load(f)
-        lvl = users[str(id)]['level']
-        await ctx.send(f'{member} está no nível {lvl}!')
-        await ctx.message.add_reaction("⬆️")
-'''
 @client.command()
 async def emoji(ctx, url:str, *,name):
     guild = ctx.guild
@@ -671,81 +796,61 @@ async def toggle(ctx, *, command):
         await ctx.send(f'Comando `{command.qualified_name}` foi **`{situacao}`**')
 
 @client.command()
-async def volume(ctx, vol):
-    player = music.get_player(guild_id=ctx.guild.id)
-    song, volume = await player.change_volume(float(vol) / 100)
-    await ctx.send(f"Mudei o volume de `{song.name}` para {volume*100}%")
-    await ctx.message.add_reaction("🔊")
+async def volume(ctx: commands.Context, volume: int):
+  if not ctx.voice_client:
+    return await ctx.send("Não to num canal")
+  elif not getattr(ctx.voice_client, "channel", None):
+    return await ctx.send("vc nem ta num canal")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  
+  if volume>100:
+    return await ctx.send("Isso é muuuuito alto")
+  elif volume<0:
+    return await ctx.send("Isso é muuuuito baixo")
+  await ctx.send(f"Volume mudado para `{volume}%`")
+  return await vc.set_volume(volume)
 
-'''      
-#Mensagens de possíveis erros de usuarios nos comandos:
-@client.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.DisabledCommand):
-        await ctx.send('Esse comando foi desativado pelo <@319850719228329985>. Chame ele pra ver isso, se precisar...')
-        await ctx.message.add_reaction("❌")
-        return
+@client.command()
+async def splay(ctx: commands.Context, *, search: str):
+        if not ctx.voice_client:
+                vc: wavelink.Player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
+        elif not getattr(ctx.author.voice, "channel", None):
+            return await ctx.send("join a voice channel first lol")
+        else:
+            vc: wavelink.Player = ctx.voice_client
+            
+        if vc.queue.is_empty and not vc.is_playing():
+            try:
+                track = await spotify.SpotifyTrack.search(query=search, return_first=True)
+                await vc.play(track)
+                await ctx.send(f'Playing `{track.title}`')
+            except Exception as e:
+                await ctx.send("Please enter a spotify **song url**.")
+                return print(e)
+        else:
+            await vc.queue.put_wait(search)
+            await ctx.send(f'Added `{search.title}` to the queue...')
+        vc.ctx = ctx
+        try:
+            if vc.loop: return
+        except Exception:
+            setattr(vc, "loop", False) 
 
-@jogodavelha.error
-async def jogodavelha_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("Por favor mencione os dois players que irão jogar")
-        await ctx.message.add_reaction("❌")
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("Por favor, mencione o segundo player!")
-        await ctx.message.add_reaction("❌")
-
-@jogar.error
-async def jogar_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("Por favor, mande a posição em que deseja jogar")
-        await ctx.message.add_reaction("❌")
-    if isinstance(error, commands.BadArgument):
-        await ctx.send("Por favor, mande um número inteiro!")
-        await ctx.message.add_reaction("❌")
-
-@bolaoito.error
-async def bolaoito_error(ctx, error):
-    #Se o usuario não mandar uma pergunta:
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("Se você não pergutar, não posso responder :eye:")
-        await ctx.message.add_reaction("❌")
-
-@role.error
-async def role_error(ctx, error):
-    if isinstance(error, commands.errors.BadArgument):
-        await ctx.send("Não conheço esse número, mande `/role <quantidade> <dado>`, por favor...")
-        await ctx.message.add_reaction("❌")
-
-@clear.error
-async def clear_error(ctx, error):
-    #Se o usuario não passar um número de mensagens a ser apagadas:
-    if isinstance(error, commands.errors.BadArgument):
-        await ctx.send("Por favor, digite o **número** de mensagens que quer apagar.")
-        await ctx.message.add_reaction("❌")
-
-@level.error
-async def level_error(ctx, error):
-    if isinstance(error, commands.errors.MemberNotFound):
-        await ctx.send("Hmmm não faço ideia de quem seja essa")
-        await ctx.message.add_reaction("❌")
-
-#Mensagem de erro em caso spamming, mostra os segundos restantes para poder mandar mensagem
-@ping.error
-@clear.error
-@bolaoito.error
-async def error(ctx, error):
-    if isinstance(error, commands.CommandOnCooldown):
-        mensagem = ":x:**Relaxa brother**:x:, sem spammar... Manda mais daqui {:.2f} seg :clock5:" .format(error.retry_after)
-        await ctx.send(mensagem)
-
-
-@client.error
-async def command_error(ctx, error):
-        if isinstance(error, commands.errors.CommandNotFound):
-            await ctx.send("Desculpa, não conheço esse comando... :pensive:")
-
-'''
+@client.command()
+async def painel(ctx: commands.Context):
+  if not ctx.voice_client:
+    return await ctx.send("Não to num canal")
+  elif not getattr(ctx.voice_client, "channel", None):
+    return await ctx.send("vc nem ta num canal")
+  else:
+    vc: wavelink.Player = ctx.voice_client
+  if not vc.is_playing():
+    return await ctx.send("Nada tocando agora")
+  
+  em = nextcord.Embed(title=f"Painel de música", description="Controla a música pelos botões", color=nextcord.Color.magenta())
+  view = ControlPanel(vc, ctx)
+  await ctx.send(embed=em, view=view)
 
 #Token:
 client.run('token')
