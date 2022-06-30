@@ -220,8 +220,9 @@ async def entre(ctx):
         await ctx.message.add_reaction("😔")
         return await ctx.send('Mas eu nao quero ficar sozinho :(')
     await ctx.author.voice.channel.connect()
+    emb = nextcord.Embed(description=f"Entrei, oláaaa :D",color=nextcord.Color.magenta())
+    await ctx.send(embed=emb)
     await ctx.message.add_reaction("😊")
-    await ctx.send('Entrei, oláaaa :D')
     
 
 @client.command(aliases=['disconnect', 'd', 'leave', 'sair', 'tchau'])
@@ -232,7 +233,8 @@ async def saia(ctx:commands.Context):
   else:
     vc: wavelink.Player = ctx.voice_client
   await vc.disconnect()
-  await ctx.send("Sai, até a próxima!")
+  emb = nextcord.Embed(description=f"Sai, até a próxima!",color=nextcord.Color.magenta())
+  await ctx.send(embed=emb)
   await ctx.message.add_reaction("👋") 
 
 #play
@@ -323,7 +325,7 @@ async def loop(ctx: commands.Context):
     await ctx.send(embed=embed)
     return await ctx.message.add_reaction("🛑")
 
-@client.command()
+@client.command(aliases=["playing"])
 async def tocando(ctx: commands.Context):
   if not ctx.voice_client:
     embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
@@ -376,22 +378,27 @@ async def stop(ctx:commands.Context):
   await ctx.message.add_reaction("🟥")
   await vc.disconnect() 
 
-@client.command()
+@client.command(aliases=["playlist"])
 async def queue(ctx: commands.Context):
   if not ctx.voice_client:
-    return await ctx.send("naum to num canal")
+    embed=nextcord.Embed(description="Não estou num canal...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    await ctx.message.add_reaction("❌")
   elif not ctx.author.voice:
-    return await ctx.send("entra num canal primeiro")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   if vc.queue.is_empty:
-    return await ctx.send("Fila vazia")
-  em = nextcord.Embed(title="Playlist", color=nextcord.Color.magenta())
+    embed=nextcord.Embed(description="Não tem nenhuma música na fila",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+  em = nextcord.Embed(title="🎶 Playlist do Qirby 🎶", color=nextcord.Color.magenta())
   queue = vc.queue.copy()
   song_count = 0
   for song in queue:
     song_count += 1
-    em.add_field(name=f"Número {song_count}", value=f"`{song.title}`")
+    em.add_field(name=f"Número {song_count}.", value=f"`{song.title}`")
   return await ctx.send(embed=em)
   
 #Comando bola oito funciona como aquela "bola mágica" que responde uma pergunta que o usuário faça
@@ -798,25 +805,35 @@ async def toggle(ctx, *, command):
 @client.command()
 async def volume(ctx: commands.Context, volume: int):
   if not ctx.voice_client:
-    return await ctx.send("Não to num canal")
+    embed=nextcord.Embed(description="Não estou num canal...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    await ctx.message.add_reaction("❌")
   elif not getattr(ctx.voice_client, "channel", None):
-    return await ctx.send("vc nem ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   
   if volume>100:
-    return await ctx.send("Isso é muuuuito alto")
+    embed=nextcord.Embed(description="Isso é muuuuito alto",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
   elif volume<0:
-    return await ctx.send("Isso é muuuuito baixo")
-  await ctx.send(f"Volume mudado para `{volume}%`")
+    embed=nextcord.Embed(description="Isso é muuuuito baixo",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
+  embed=nextcord.Embed(description=f"Volume mudado para: **{volume}%**",color=nextcord.Color.magenta())
+  await ctx.send(embed=embed)
+  await ctx.message.add_reaction("🔊")
   return await vc.set_volume(volume)
 
-@client.command()
+@client.command(aliases=["sp", "spotify"])
 async def splay(ctx: commands.Context, *, search: str):
         if not ctx.voice_client:
                 vc: wavelink.Player = await ctx.author.voice.channel.connect(cls=wavelink.Player)
         elif not getattr(ctx.author.voice, "channel", None):
-            return await ctx.send("join a voice channel first lol")
+            await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+            return await ctx.message.add_reaction("❌")
         else:
             vc: wavelink.Player = ctx.voice_client
             
@@ -824,13 +841,18 @@ async def splay(ctx: commands.Context, *, search: str):
             try:
                 track = await spotify.SpotifyTrack.search(query=search, return_first=True)
                 await vc.play(track)
-                await ctx.send(f'Playing `{track.title}`')
+                embe = nextcord.Embed(description=f"Tocando: **{track.title}**",color=nextcord.Color.magenta())
+                embe.set_image(url=track.thumbnail)
+                await ctx.send(embed=embe)
             except Exception as e:
-                await ctx.send("Please enter a spotify **song url**.")
-                return print(e)
+              embe = nextcord.Embed(description=f"Por favor, coloque um link do Spotify",color=nextcord.Color.magenta())
+              await ctx.send(embed=embe)
+              return await ctx.message.add_reaction("❌")
         else:
             await vc.queue.put_wait(search)
-            await ctx.send(f'Added `{search.title}` to the queue...')
+            emb = nextcord.Embed(description=f"{search.title} foi adicionado a playlist!",color=nextcord.Color.magenta())
+            await ctx.send(embed=emb)
+            await ctx.message.add_reaction("🎶")
         vc.ctx = ctx
         try:
             if vc.loop: return
@@ -840,15 +862,20 @@ async def splay(ctx: commands.Context, *, search: str):
 @client.command()
 async def painel(ctx: commands.Context):
   if not ctx.voice_client:
-    return await ctx.send("Não to num canal")
+    embed=nextcord.Embed(description="Não estou num canal...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("❌")
   elif not getattr(ctx.voice_client, "channel", None):
-    return await ctx.send("vc nem ta num canal")
+    await ctx.send(f"{ctx.author.mention}, você preicsa entrar no canal primeiro!")
+    return await ctx.message.add_reaction("❌")
   else:
     vc: wavelink.Player = ctx.voice_client
   if not vc.is_playing():
-    return await ctx.send("Nada tocando agora")
+    embed=nextcord.Embed(description="Não tem nada tocando...",color=nextcord.Color.magenta())
+    await ctx.send(embed=embed)
+    return await ctx.message.add_reaction("🔇")
   
-  em = nextcord.Embed(title=f"Painel de música", description="Controla a música pelos botões", color=nextcord.Color.magenta())
+  em = nextcord.Embed(title=f"😎 DJ Qirbyinho 😎", description="Controle a música pelos botões abaixo :control_knobs:", color=nextcord.Color.magenta())
   view = ControlPanel(vc, ctx)
   await ctx.send(embed=em, view=view)
 
